@@ -1,0 +1,19 @@
+*.zip
+
+# bundle-app (Shopify app) build artifacts / dependencies
+bundle-app/node_modules
+bundle-app/.cache
+bundle-app/build
+bundle-app/app/build
+bundle-app/public/build/
+bundle-app/public/_dev
+bundle-app/app/public/build
+bundle-app/prisma/dev.sqlite
+bundle-app/prisma/dev.sqlite-journal
+bundle-app/database.sqlite
+bundle-app/.env
+bundle-app/.env.*
+bundle-app/extensions/*/dist
+bundle-app/.shopify/*
+bundle-app/.shopify.lock
+bundle-app/.react-router/

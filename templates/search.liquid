@@ -1,0 +1,30 @@
+{% comment %} VCN Search results {% endcomment %}
+<div class="vcn-page">
+  <h1>Kết Quả Tìm Kiếm</h1>
+
+  {% form 'search', class: 'vcn-search-form' %}
+    <div class="vcn-form-field" style="flex-direction:row;gap:0.6rem;">
+      <input type="search" name="q" value="{{ search.terms | escape }}" placeholder="Tìm kiếm sản phẩm..." style="flex:1;">
+      <button type="submit" class="vcn-btn">Tìm</button>
+    </div>
+  {% endform %}
+
+  {% if search.performed %}
+    {% if search.results_count == 0 %}
+      <p style="color:rgba(255,255,255,0.5);margin-top:2rem;">
+        Không tìm thấy kết quả nào cho "{{ search.terms }}".
+      </p>
+    {% else %}
+      <div class="vcn-products-grid" style="margin-top:2rem;">
+        {% for item in search.results %}
+          <a href="{{ item.url }}" class="vcn-product-card">
+            {% if item.featured_image %}
+              <img src="{{ item.featured_image | img_url: '500x500', crop: 'center' }}" alt="{{ item.title }}" style="width:100%;border-radius:12px;">
+            {% endif %}
+            <h3 style="margin-top:0.6rem;">{{ item.title }}</h3>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
+</div>

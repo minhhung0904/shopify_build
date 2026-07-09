@@ -1,0 +1,62 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "0b2890ff9c1df55649886e9bcb71f0c4"
+application_url = "https://example.com"
+embedded = true
+name = "bundle-app"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,write_metaobjects,write_metaobject_definitions"
+
+[metaobjects.app.bundle]
+name = "Bundle"
+display_name_field = "title"
+
+  [metaobjects.app.bundle.access]
+  admin = "merchant_read_write"
+  storefront = "public_read"
+
+[metaobjects.app.bundle.fields.title]
+name = "Title"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.badge_text]
+name = "Badge text"
+type = "single_line_text_field"
+
+[metaobjects.app.bundle.fields.image]
+name = "Image"
+type = "file_reference"
+
+[metaobjects.app.bundle.fields.products]
+name = "Products"
+type = "list.product_reference"
+required = true
+
+[metaobjects.app.bundle.fields.price]
+name = "Bundle price"
+type = "number_decimal"
+
+[metaobjects.app.bundle.fields.description]
+name = "Description"
+type = "multi_line_text_field"
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+[auth]
+redirect_urls = [ "https://example.com/api/auth" ]
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true

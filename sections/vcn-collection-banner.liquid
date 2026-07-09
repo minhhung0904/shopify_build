@@ -1,0 +1,131 @@
+{% comment %} VCN Collection Banner + Product Grid {% endcomment %}
+<div class="vcn-collection">
+
+  <div class="vcn-collection__banner">
+    <div class="vcn-collection__banner-bg"></div>
+    <div class="vcn-collection__banner-content">
+      {% if collection.image %}
+        <div class="vcn-collection__banner-img">
+          <img src="{{ collection.image | img_url: '1400x400', crop: 'center' }}" alt="{{ collection.title }}">
+        </div>
+      {% endif %}
+      <p class="vcn-section-eyebrow">Bộ Sưu Tập</p>
+      <h1 class="vcn-collection__title">{{ collection.title }}</h1>
+      {% if collection.description != blank %}
+        <p class="vcn-collection__desc">{{ collection.description }}</p>
+      {% endif %}
+      <p class="vcn-collection__count">{{ collection.products_count }} sản phẩm</p>
+    </div>
+  </div>
+
+  <div class="vcn-collection__body">
+    <div class="vcn-collection__sort">
+      {% if collection.products_count > 0 %}
+        <span class="vcn-collection__showing">Hiển thị {{ collection.products_count }} sản phẩm</span>
+      {% endif %}
+    </div>
+
+    <div class="vcn-products-grid">
+      {% for product in collection.products %}
+        <a href="{{ product.url }}" class="vcn-product-card">
+          <div class="vcn-product-card__img-wrap">
+            {% if product.featured_image %}
+              <img src="{{ product.featured_image | img_url: '500x500', crop: 'center' }}"
+                   alt="{{ product.title }}" loading="lazy">
+            {% else %}
+              <div class="vcn-product-card__no-img">
+                <svg viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="25" stroke="rgba(139,92,246,0.5)" stroke-width="1.5"/><circle cx="40" cy="40" r="5" fill="#8B5CF6"/></svg>
+              </div>
+            {% endif %}
+            {% if product.compare_at_price > product.price %}
+              <span class="vcn-badge vcn-badge--sale">
+                -{{ product.compare_at_price | minus: product.price | times: 100 | divided_by: product.compare_at_price | round }}%
+              </span>
+            {% endif %}
+          </div>
+          <div class="vcn-product-card__info">
+            <h3 class="vcn-product-card__title">{{ product.title }}</h3>
+            <div class="vcn-product-card__price">
+              <span class="vcn-price vcn-price--current">{{ product.price | money }}</span>
+              {% if product.compare_at_price > product.price %}
+                <span class="vcn-price vcn-price--original">{{ product.compare_at_price | money }}</span>
+              {% endif %}
+            </div>
+            <div class="vcn-product-card__stars">★★★★★ <span>(4.9)</span></div>
+          </div>
+          <div class="vcn-product-card__hover"><span>Xem Chi Tiết →</span></div>
+        </a>
+      {% else %}
+        <p style="color:rgba(255,255,255,0.4);grid-column:1/-1;text-align:center;padding:3rem 0;">
+          Sản phẩm đang được cập nhật...
+        </p>
+      {% endfor %}
+    </div>
+
+    {% if paginate.pages > 1 %}
+      {% paginate collection.products by 12 %}
+        <div class="vcn-pagination">
+          {{ paginate | default_pagination }}
+        </div>
+      {% endpaginate %}
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.vcn-collection { background: #0a0a0f; min-height: 100vh; }
+.vcn-collection__banner {
+  position: relative;
+  padding: 5rem 6vw 3rem;
+  text-align: center;
+  overflow: hidden;
+}
+.vcn-collection__banner-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 80% at 50% 0%, rgba(139,92,246,0.12) 0%, transparent 70%);
+}
+.vcn-collection__banner-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.15;
+}
+.vcn-collection__banner-img img { width: 100%; height: 100%; object-fit: cover; }
+.vcn-collection__banner-content { position: relative; z-index: 1; }
+.vcn-collection__title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+.vcn-collection__desc { color: rgba(255,255,255,0.5); max-width: 560px; margin: 0 auto 0.75rem; }
+.vcn-collection__count { font-size: 0.8rem; color: rgba(255,255,255,0.3); }
+.vcn-collection__body { padding: 2rem 6vw 5rem; }
+.vcn-collection__sort { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.vcn-collection__showing { font-size: 0.85rem; color: rgba(255,255,255,0.4); }
+.vcn-pagination { text-align: center; margin-top: 3rem; }
+.vcn-pagination a, .vcn-pagination span {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 8px; margin: 0 0.2rem;
+  font-size: 0.88rem; font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6); text-decoration: none;
+  transition: all 0.15s;
+}
+.vcn-pagination a:hover { border-color: #8B5CF6; color: #fff; }
+.vcn-pagination .current { background: #8B5CF6; border-color: #8B5CF6; color: #fff; }
+@media(max-width:640px){
+  .vcn-collection__banner { padding: 3rem 5vw 2rem; }
+  .vcn-collection__body { padding: 1.5rem 5vw 3rem; }
+  .vcn-products-grid { grid-template-columns: repeat(2,1fr); gap: 1rem; }
+}
+</style>
+
+{% schema %}
+{
+  "name": "VCN Collection Banner",
+  "settings": [],
+  "presets": [{ "name": "VCN Collection Banner" }]
+}
+{% endschema %}

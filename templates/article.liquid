@@ -1,0 +1,44 @@
+{% comment %} VCN Article page {% endcomment %}
+<div class="vcn-page" style="max-width:760px;">
+  <p style="color:rgba(255,255,255,0.4);font-size:0.85rem;">
+    {{ article.published_at | date: '%d %b, %Y' }} — {{ article.author }}
+  </p>
+  <h1>{{ article.title }}</h1>
+  {% if article.image %}
+    <img src="{{ article.image | img_url: '900x500', crop: 'center' }}" alt="{{ article.title }}" style="border-radius:12px;width:100%;margin-bottom:2rem;">
+  {% endif %}
+  <div class="vcn-page__body">
+    {{ article.content }}
+  </div>
+
+  {% if blog.comments_enabled? %}
+    <div class="vcn-page__body" style="margin-top:3rem;border-top:1px solid rgba(255,255,255,0.08);padding-top:2rem;">
+      <h3>{{ article.comments_count }} Bình Luận</h3>
+      {% for comment in article.comments %}
+        <div style="margin-bottom:1.2rem;">
+          <strong>{{ comment.author }}</strong>
+          <p>{{ comment.content }}</p>
+        </div>
+      {% endfor %}
+
+      {% form 'new_comment', article %}
+        {% if form.posted_successfully? %}
+          <p style="color:#8B5CF6;">Bình luận của bạn đã được gửi.</p>
+        {% endif %}
+        <div class="vcn-form-field">
+          <label for="CommentAuthor">Tên</label>
+          <input type="text" name="comment[author]" id="CommentAuthor" required>
+        </div>
+        <div class="vcn-form-field">
+          <label for="CommentEmail">Email</label>
+          <input type="email" name="comment[email]" id="CommentEmail" required>
+        </div>
+        <div class="vcn-form-field">
+          <label for="CommentBody">Bình luận</label>
+          <textarea name="comment[body]" id="CommentBody" rows="4" required></textarea>
+        </div>
+        <button type="submit" class="vcn-btn">Gửi Bình Luận</button>
+      {% endform %}
+    </div>
+  {% endif %}
+</div>

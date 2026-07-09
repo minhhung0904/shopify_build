@@ -1,0 +1,16 @@
+{
+  "theme_info": {
+    "theme_name": "VCN Store"
+  },
+  "Colors": {
+    "name": "Colors",
+    "settings": {
+      "color_background": {
+        "label": "Background"
+      },
+      "color_accent": {
+        "label": "Accent"
+      }
+    }
+  }
+}

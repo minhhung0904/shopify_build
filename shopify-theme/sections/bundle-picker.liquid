@@ -1,0 +1,290 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-picker__grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 2rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  @media screen and (min-width: 600px) {
+    .bundle-picker-{{ section.id }} .bundle-picker__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media screen and (min-width: 990px) {
+    .bundle-picker-{{ section.id }} .bundle-picker__grid {
+      grid-template-columns: repeat({{ section.settings.columns_desktop }}, 1fr);
+    }
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: rgb(var(--color-background));
+    border-radius: var(--product-card-corner-radius, 1.2rem);
+    box-shadow: 0 0.6rem 1.5rem rgba(var(--color-shadow), 0.1);
+    overflow: hidden;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__badge {
+    position: absolute;
+    top: 1.2rem;
+    left: 1.2rem;
+    z-index: 1;
+    padding: 0.4rem 1rem;
+    border-radius: var(--badge-corner-radius, 0.6rem);
+    background: rgb(var(--color-button));
+    color: rgb(var(--color-button-text));
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__image {
+    aspect-ratio: 1 / 1;
+    background: rgba(var(--color-foreground), 0.04);
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__image img,
+  .bundle-picker-{{ section.id }} .bundle-card__image svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__body {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    flex-grow: 1;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__title {
+    margin: 0;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__includes {
+    margin: 0;
+    font-size: 1.3rem;
+    opacity: 0.75;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__price {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__form {
+    margin-top: auto;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__submit {
+    width: 100%;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__error {
+    color: rgb(var(--color-error, 195, 29, 29));
+    font-size: 1.3rem;
+    margin: 0.6rem 0 0;
+    display: none;
+  }
+
+  .bundle-picker-{{ section.id }} .bundle-card__error.is-visible {
+    display: block;
+  }
+{%- endstyle -%}
+
+<div class="color-{{ section.settings.color_scheme }} gradient bundle-picker-{{ section.id }}">
+  <div class="page-width section-{{ section.id }}-padding">
+    {%- if section.settings.heading != blank -%}
+      <h2 class="title title-wrapper--no-top-margin inline-richtext title-with-highlight {{ section.settings.heading_size }}" style="--hightlight-color: rgba(245, 130, 32, 0.35);">
+        {{ section.settings.heading }}
+      </h2>
+    {%- endif -%}
+
+    <ul class="bundle-picker__grid" role="list">
+      {%- comment -%} 1) Bundles authored directly in the Theme Editor as blocks {%- endcomment -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'manual_bundle' -%}
+          {%- liquid
+            assign bundle_products = block.settings.products
+            assign bundle_title = block.settings.title
+            assign bundle_badge = block.settings.badge_text
+            assign bundle_price = block.settings.price
+            assign bundle_image = block.settings.image
+          -%}
+          {%- render 'bundle-card',
+            id: block.id,
+            title: bundle_title,
+            badge_text: bundle_badge,
+            price_text: bundle_price,
+            image: bundle_image,
+            products: bundle_products,
+            block_attrs: block.shopify_attributes
+          -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      {%- comment -%} 2) Bundles managed centrally via the "Bundle" metaobject {%- endcomment -%}
+      {%- if section.settings.show_metaobject_bundles -%}
+        {%- for bundle in shop.metaobjects.bundle.values -%}
+          {%- liquid
+            assign meta_price = ''
+            if bundle.price.value
+              assign meta_price = bundle.price.value | times: 100 | money
+            endif
+          -%}
+          {%- render 'bundle-card',
+            id: bundle.id,
+            title: bundle.title.value,
+            badge_text: bundle.badge_text.value,
+            price_text: meta_price,
+            image: bundle.image.value,
+            products: bundle.products.value
+          -%}
+        {%- endfor -%}
+      {%- endif -%}
+    </ul>
+  </div>
+</div>
+
+<script src="{{ 'bundle-picker.js' | asset_url }}" defer="defer"></script>
+
+{% schema %}
+{
+  "name": "Bundle picker",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "default": "Build your bundle",
+      "label": "Heading"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "options": [
+        { "value": "h2", "label": "Small" },
+        { "value": "h1", "label": "Medium" },
+        { "value": "h0", "label": "Large" }
+      ],
+      "default": "h1",
+      "label": "Heading size"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_metaobject_bundles",
+      "label": "Also show bundles from the \"Bundle\" metaobject",
+      "info": "Requires the Bundle metaobject definition to be created once in Settings > Custom data.",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3",
+      "label": "Columns on desktop"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "manual_bundle",
+      "name": "Bundle (manual)",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "default": "Starter bundle",
+          "label": "Title"
+        },
+        {
+          "type": "text",
+          "id": "badge_text",
+          "default": "Save 15%",
+          "label": "Badge text"
+        },
+        {
+          "type": "text",
+          "id": "price",
+          "default": "$49.99",
+          "label": "Bundle price (display text)",
+          "info": "This is a display label only. Create a matching Shopify discount so the price is enforced at checkout."
+        },
+        {
+          "type": "product_list",
+          "id": "products",
+          "label": "Products in this bundle",
+          "limit": 6
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Bundle picker",
+      "blocks": [
+        { "type": "manual_bundle" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,20 @@
+{% comment %} VCN Activate account {% endcomment %}
+<div class="vcn-page" style="max-width:420px;">
+  <h1>{{ 'customer.activate_account.title' | t }}</h1>
+  <p style="color:rgba(255,255,255,0.5);">{{ 'customer.activate_account.subtext' | t }}</p>
+
+  {% form 'activate_customer_password' %}
+    <div class="vcn-form-field">
+      <label for="Password">{{ 'customer.activate_account.password' | t }}</label>
+      <input type="password" name="customer[password]" id="Password" required>
+    </div>
+    <div class="vcn-form-field">
+      <label for="PasswordConfirmation">{{ 'customer.activate_account.password_confirm' | t }}</label>
+      <input type="password" name="customer[password_confirmation]" id="PasswordConfirmation" required>
+    </div>
+    <div style="display:flex;gap:1rem;">
+      <button type="submit" class="vcn-btn">{{ 'customer.activate_account.submit' | t }}</button>
+      <button type="submit" name="decline" class="vcn-btn vcn-btn--outline">{{ 'customer.activate_account.decline' | t }}</button>
+    </div>
+  {% endform %}
+</div>

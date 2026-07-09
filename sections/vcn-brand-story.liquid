@@ -1,0 +1,155 @@
+{% comment %} VCN Brand Story Section {% endcomment %}
+<section class="vcn-story">
+  <div class="vcn-story__inner">
+    <div class="vcn-story__text">
+      <p class="vcn-section-eyebrow">{{ section.settings.eyebrow | default: 'Câu Chuyện Của Chúng Tôi' }}</p>
+      <h2 class="vcn-section-title">{{ section.settings.title | default: 'Ánh Sáng Xứng Đáng Với Niềm Đam Mê' }}</h2>
+      <div class="vcn-story__body">
+        <p>{{ section.settings.body_1 | default: 'VCN ra đời từ một nhu cầu đơn giản: người chơi mô hình xứng đáng có ánh sáng đúng chuẩn. Không phải đèn dán rẻ tiền từ Taobao. Không phải ánh đèn phòng khách nhợt nhạt.' }}</p>
+        <p>{{ section.settings.body_2 | default: 'Mỗi sản phẩm của VCN được test kỹ trước khi giao — kiểm tra màu sắc, độ sáng, độ bền keo. Chúng tôi bán thứ chúng tôi tự dùng.' }}</p>
+      </div>
+      <div class="vcn-story__features">
+        <div class="vcn-feature">
+          <div class="vcn-feature__icon">✦</div>
+          <div>
+            <strong>Kiểm tra 100% trước khi giao</strong>
+            <p>Không có sản phẩm lỗi rời kho VCN</p>
+          </div>
+        </div>
+        <div class="vcn-feature">
+          <div class="vcn-feature__icon">✦</div>
+          <div>
+            <strong>Đổi trả 7 ngày</strong>
+            <p>Lỗi do sản phẩm — đổi ngay, không hỏi thêm</p>
+          </div>
+        </div>
+        <div class="vcn-feature">
+          <div class="vcn-feature__icon">✦</div>
+          <div>
+            <strong>Hỗ trợ qua Zalo/FB</strong>
+            <p>Phản hồi trong 1 giờ, 8h–22h mỗi ngày</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="vcn-story__visual">
+      {% if section.settings.image != blank %}
+        <img src="{{ section.settings.image | img_url: '600x600' }}" alt="VCN Brand Story">
+      {% else %}
+        <div class="vcn-story__img-placeholder">
+          <div class="vcn-story__glow"></div>
+          <div class="vcn-story__numbers">
+            <div class="vcn-number-card">
+              <span class="vcn-number">2,400+</span>
+              <span class="vcn-number-label">Khách hàng hài lòng</span>
+            </div>
+            <div class="vcn-number-card">
+              <span class="vcn-number">4.9★</span>
+              <span class="vcn-number-label">Điểm đánh giá TB</span>
+            </div>
+            <div class="vcn-number-card">
+              <span class="vcn-number">50K h</span>
+              <span class="vcn-number-label">Tuổi thọ đèn LED</span>
+            </div>
+            <div class="vcn-number-card">
+              <span class="vcn-number">1–3 ngày</span>
+              <span class="vcn-number-label">Giao hàng toàn quốc</span>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<style>
+.vcn-story {
+  background: #0a0a0f;
+  padding: 6rem 6vw;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.vcn-story__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5rem;
+  align-items: center;
+}
+.vcn-story__body p {
+  color: rgba(255,255,255,0.6);
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+.vcn-story__features { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.2rem; }
+.vcn-feature {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.vcn-feature__icon {
+  color: #8B5CF6;
+  font-size: 1.1rem;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+.vcn-feature strong { display: block; color: #fff; font-size: 0.95rem; margin-bottom: 0.2rem; }
+.vcn-feature p { color: rgba(255,255,255,0.45); font-size: 0.85rem; margin: 0; }
+.vcn-story__img-placeholder { position: relative; }
+.vcn-story__glow {
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(139,92,246,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+.vcn-story__numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.vcn-number-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.vcn-number-card:hover { border-color: rgba(139,92,246,0.4); }
+.vcn-number {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #fff, #c4b5fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.vcn-number-label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 0.3rem;
+}
+@media(max-width:768px){
+  .vcn-story { padding: 4rem 5vw; }
+  .vcn-story__inner { grid-template-columns: 1fr; gap: 3rem; }
+  .vcn-story__numbers { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+
+{% schema %}
+{
+  "name": "VCN Brand Story",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "title", "label": "Title" },
+    { "type": "textarea", "id": "body_1", "label": "Paragraph 1" },
+    { "type": "textarea", "id": "body_2", "label": "Paragraph 2" },
+    { "type": "image_picker", "id": "image", "label": "Image (optional)" }
+  ],
+  "presets": [{ "name": "VCN Brand Story" }]
+}
+{% endschema %}

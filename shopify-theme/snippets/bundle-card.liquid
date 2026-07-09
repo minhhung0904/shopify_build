@@ -1,0 +1,66 @@
+{%- comment -%}
+  Renders one bundle card. Accepts:
+  id, title, badge_text, price_text (already formatted string), image, products (array of Product), block_attrs (optional)
+{%- endcomment -%}
+
+{%- liquid
+  assign variant_ids = ''
+  for product in products
+    assign first_available = product.selected_or_first_available_variant
+    if first_available == blank
+      assign first_available = product.variants.first
+    endif
+    if first_available
+      assign variant_ids = variant_ids | append: first_available.id | append: ','
+    endif
+  endfor
+  assign variant_ids = variant_ids | remove_last: ','
+-%}
+
+<li class="bundle-card" {{ block_attrs }}>
+  {%- if badge_text != blank -%}
+    <span class="bundle-card__badge">{{ badge_text }}</span>
+  {%- endif -%}
+
+  <div class="bundle-card__image">
+    {%- if image != blank -%}
+      {{ image | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,700' }}
+    {%- elsif products.first.featured_image != blank -%}
+      {{ products.first.featured_image | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,700' }}
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag }}
+    {%- endif -%}
+  </div>
+
+  <div class="bundle-card__body">
+    {%- if title != blank -%}
+      <h3 class="bundle-card__title h4">{{ title }}</h3>
+    {%- endif -%}
+
+    {%- if products.size > 0 -%}
+      <p class="bundle-card__includes">
+        {{- 'Includes:' }}
+        {%- for product in products -%}
+          {{- product.title -}}{% unless forloop.last %}, {% endunless %}
+        {%- endfor -%}
+      </p>
+    {%- endif -%}
+
+    {%- if price_text != blank -%}
+      <p class="bundle-card__price">{{ price_text }}</p>
+    {%- endif -%}
+
+    <bundle-add-to-cart class="bundle-card__form">
+      <form data-bundle-form data-variant-ids="{{ variant_ids }}" data-bundle-title="{{ title | escape }}">
+        <button type="submit" class="button bundle-card__submit" {% if variant_ids == blank %}disabled{% endif %}>
+          {%- if variant_ids == blank -%}
+            {{ 'products.product.sold_out' | t }}
+          {%- else -%}
+            {{ 'products.product.add_to_cart' | t }}
+          {%- endif -%}
+        </button>
+        <p class="bundle-card__error" data-bundle-error role="alert"></p>
+      </form>
+    </bundle-add-to-cart>
+  </div>
+</li>

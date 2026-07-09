@@ -1,0 +1,77 @@
+{%- if section.settings.enable -%}
+  {%- style -%}
+    .scroll-to-top-{{ section.id }} {
+      position: fixed;
+      right: 2rem;
+      bottom: 2rem;
+      z-index: 90;
+      width: 4.4rem;
+      height: 4.4rem;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(1rem);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+      box-shadow: 0 0.4rem 1.2rem rgba(var(--color-shadow), 0.25);
+    }
+
+    .scroll-to-top-{{ section.id }}.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .scroll-to-top-{{ section.id }} svg {
+      width: 1.8rem;
+      height: 1.8rem;
+      transform: rotate(-90deg);
+    }
+  {%- endstyle -%}
+
+  <button
+    type="button"
+    class="scroll-to-top-{{ section.id }} color-{{ section.settings.color_scheme }} gradient"
+    id="ScrollToTop-{{ section.id }}"
+    data-threshold="{{ section.settings.show_after }}"
+    aria-label="Back to top"
+  >
+    {{- 'icon-arrow.svg' | inline_asset_content -}}
+  </button>
+
+  <script src="{{ 'scroll-to-top.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Scroll to top button",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable",
+      "label": "Enable button",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "show_after",
+      "min": 100,
+      "max": 2000,
+      "step": 100,
+      "unit": "px",
+      "label": "Show after scrolling",
+      "default": 600
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-4"
+    }
+  ]
+}
+{% endschema %}

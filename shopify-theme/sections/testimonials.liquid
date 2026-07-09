@@ -1,0 +1,239 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+
+  .testimonials-{{ section.id }} .testimonials__header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__rating {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+    font-size: 1.6rem;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__stars {
+    display: inline-flex;
+    gap: 0.2rem;
+    color: #F58220;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__stars svg {
+    width: 2rem;
+    height: 2rem;
+    fill: #F58220;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 2rem;
+  }
+
+  @media screen and (min-width: 600px) {
+    .testimonials-{{ section.id }} .testimonials__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media screen and (min-width: 990px) {
+    .testimonials-{{ section.id }} .testimonials__grid {
+      grid-template-columns: repeat({{ section.settings.columns_desktop }}, 1fr);
+    }
+  }
+
+  .testimonials-{{ section.id }} .testimonials__card {
+    background: rgb(var(--color-background));
+    border-radius: var(--product-card-corner-radius, 1.2rem);
+    box-shadow: 0 0.6rem 1.5rem rgba(var(--color-shadow), 0.1);
+    padding: 2.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__card .testimonials__stars svg {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__quote {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__author {
+    font-weight: 700;
+    margin: 0;
+  }
+{%- endstyle -%}
+
+<div class="color-{{ section.settings.color_scheme }} gradient testimonials-{{ section.id }}">
+  <div class="page-width section-{{ section.id }}-padding">
+    <div class="testimonials__header">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="title title-wrapper--no-top-margin inline-richtext title-with-highlight {{ section.settings.heading_size }}" style="--hightlight-color: rgba(0, 182, 122, 0.3);">
+          {{ section.settings.heading }}
+        </h2>
+      {%- endif -%}
+      {%- if section.settings.show_rating -%}
+        <div class="testimonials__rating">
+          <span class="testimonials__stars">
+            {%- for i in (1..5) -%}
+              {{- 'icon-star.svg' | inline_asset_content -}}
+            {%- endfor -%}
+          </span>
+          <span>{{ section.settings.rating_text }}</span>
+        </div>
+      {%- endif -%}
+    </div>
+
+    <ul class="testimonials__grid" role="list">
+      {%- for block in section.blocks -%}
+        <li class="testimonials__card" {{ block.shopify_attributes }}>
+          <span class="testimonials__stars">
+            {%- assign stars = block.settings.rating | default: 5 -%}
+            {%- for i in (1..stars) -%}
+              {{- 'icon-star.svg' | inline_asset_content -}}
+            {%- endfor -%}
+          </span>
+          <p class="testimonials__quote">&ldquo;{{ block.settings.quote }}&rdquo;</p>
+          <p class="testimonials__author">{{ block.settings.author }}</p>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Testimonials",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "default": "Customer reviews",
+      "label": "Heading"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "options": [
+        { "value": "h2", "label": "Small" },
+        { "value": "h1", "label": "Medium" },
+        { "value": "h0", "label": "Large" }
+      ],
+      "default": "h1",
+      "label": "Heading size"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "default": true,
+      "label": "Show rating summary"
+    },
+    {
+      "type": "text",
+      "id": "rating_text",
+      "default": "4.8 out of 5 based on verified reviews",
+      "label": "Rating text"
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "4",
+      "label": "Columns on desktop"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Review",
+      "settings": [
+        {
+          "type": "range",
+          "id": "rating",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 5,
+          "label": "Star rating"
+        },
+        {
+          "type": "textarea",
+          "id": "quote",
+          "default": "Amazing quality and it looks incredible lit up at night. Shipping was fast too!",
+          "label": "Review text"
+        },
+        {
+          "type": "text",
+          "id": "author",
+          "default": "Verified Customer",
+          "label": "Author name"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Testimonials",
+      "blocks": [
+        { "type": "review", "settings": { "quote": "The quality is amazing, way better than I expected. Perfect gift for anyone.", "author": "Jordan M." } },
+        { "type": "review", "settings": { "quote": "Packaging was solid, arrived without a scratch, and it looks even better in person.", "author": "Alicia R." } },
+        { "type": "review", "settings": { "quote": "Customer service answered all my questions fast and the product exceeded my expectations.", "author": "Marcus T." } },
+        { "type": "review", "settings": { "quote": "Bought one for myself and one as a gift, both were a huge hit. Will be ordering again.", "author": "Priya S." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

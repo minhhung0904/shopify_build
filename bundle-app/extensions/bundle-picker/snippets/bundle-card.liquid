@@ -1,0 +1,70 @@
+{%- comment -%}
+  Renders one bundle card. Accepts:
+  block_id, title, badge_text, price_text (already formatted string), image, products (array of Product), child_attrs (optional)
+{%- endcomment -%}
+
+{%- liquid
+  assign variant_ids = ''
+  for product in products
+    assign first_available = product.selected_or_first_available_variant
+    if first_available == blank
+      assign first_available = product.variants.first
+    endif
+    if first_available
+      assign variant_ids = variant_ids | append: first_available.id | append: ','
+    endif
+  endfor
+  assign variant_ids = variant_ids | remove_last: ','
+-%}
+
+<li class="bp-card" {{ child_attrs }}>
+  {%- if badge_text != blank -%}
+    <span class="bp-card__badge">{{ badge_text }}</span>
+  {%- endif -%}
+
+  <div class="bp-card__image">
+    {%- if image != blank -%}
+      {{ image | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,700' }}
+    {%- elsif products.first.featured_image != blank -%}
+      {{ products.first.featured_image | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,700' }}
+    {%- endif -%}
+  </div>
+
+  <div class="bp-card__body">
+    {%- if title != blank -%}
+      <h3 class="bp-card__title">{{ title }}</h3>
+    {%- endif -%}
+
+    {%- if products.size > 0 -%}
+      <p class="bp-card__includes">
+        {{- 'Includes:' }}
+        {%- for product in products -%}
+          {{- product.title -}}{% unless forloop.last %}, {% endunless %}
+        {%- endfor -%}
+      </p>
+    {%- endif -%}
+
+    {%- if price_text != blank -%}
+      <p class="bp-card__price">{{ price_text }}</p>
+    {%- endif -%}
+
+    <bundle-add-to-cart class="bp-card__form">
+      <form
+        data-bundle-form
+        data-variant-ids="{{ variant_ids }}"
+        data-bundle-title="{{ title | escape }}"
+        data-cart-add-url="{{ routes.cart_add_url }}"
+        data-cart-url="{{ routes.cart_url }}"
+      >
+        <button type="submit" class="bp-card__submit" {% if variant_ids == blank %}disabled{% endif %}>
+          {%- if variant_ids == blank -%}
+            Sold out
+          {%- else -%}
+            Add bundle to cart
+          {%- endif -%}
+        </button>
+        <p class="bp-card__error" data-bundle-error role="alert"></p>
+      </form>
+    </bundle-add-to-cart>
+  </div>
+</li>

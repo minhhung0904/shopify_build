@@ -1,0 +1,162 @@
+{%- if section.settings.enable -%}
+  {%- style -%}
+    .promo-popup-{{ section.id }} {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .promo-popup-{{ section.id }}.is-open {
+      display: flex;
+    }
+
+    .promo-popup-{{ section.id }} .promo-popup__card {
+      position: relative;
+      max-width: 44rem;
+      width: 100%;
+      border-radius: var(--product-card-corner-radius, 1.2rem);
+      padding: 4rem 3rem 3.4rem;
+      text-align: center;
+      box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.25);
+    }
+
+    .promo-popup-{{ section.id }} .promo-popup__close {
+      position: absolute;
+      top: 1.2rem;
+      right: 1.2rem;
+      width: 3.2rem;
+      height: 3.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: currentColor;
+    }
+
+    .promo-popup-{{ section.id }} .promo-popup__close svg {
+      width: 1.8rem;
+      height: 1.8rem;
+    }
+
+    .promo-popup-{{ section.id }} .promo-popup__heading {
+      margin: 0 0 1rem;
+    }
+
+    .promo-popup-{{ section.id }} .promo-popup__text {
+      margin: 0 0 2rem;
+    }
+
+    .promo-popup-{{ section.id }} .promo-popup__code {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.8rem 1.6rem;
+      border: 0.2rem dashed currentColor;
+      border-radius: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+  {%- endstyle -%}
+
+  <div
+    class="promo-popup-{{ section.id }} color-{{ section.settings.color_scheme }}"
+    id="PromoPopup-{{ section.id }}"
+    data-delay="{{ section.settings.delay_seconds | times: 1000 }}"
+    data-frequency="{{ section.settings.frequency }}"
+  >
+    <div class="promo-popup__card gradient" role="dialog" aria-modal="true" aria-labelledby="PromoPopupHeading-{{ section.id }}">
+      <button type="button" class="promo-popup__close" aria-label="{{ 'accessibility.close' | t }}" data-promo-popup-close>
+        {{- 'icon-close.svg' | inline_asset_content -}}
+      </button>
+      {%- if section.settings.heading != blank -%}
+        <h2 id="PromoPopupHeading-{{ section.id }}" class="promo-popup__heading h2">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.text != blank -%}
+        <div class="promo-popup__text rte">{{ section.settings.text }}</div>
+      {%- endif -%}
+      {%- if section.settings.discount_code != blank -%}
+        <span class="promo-popup__code">{{ section.settings.discount_code }}</span>
+      {%- endif -%}
+      {%- if section.settings.button_label != blank -%}
+        <a href="{{ section.settings.button_link }}" class="button">{{ section.settings.button_label }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+
+  <script src="{{ 'promo-popup.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Promo popup",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable",
+      "label": "Enable popup",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Don't miss out!",
+      "label": "Heading"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "default": "<p>Sign up for exclusive offers and updates.</p>",
+      "label": "Text"
+    },
+    {
+      "type": "text",
+      "id": "discount_code",
+      "default": "WELCOME10",
+      "label": "Discount code (optional)"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "default": "Shop now",
+      "label": "Button label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-3"
+    },
+    {
+      "type": "range",
+      "id": "delay_seconds",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "unit": "s",
+      "label": "Delay before showing",
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "frequency",
+      "options": [
+        { "value": "session", "label": "Once per browser session" },
+        { "value": "every_visit", "label": "Every page load" }
+      ],
+      "default": "session",
+      "label": "Show frequency"
+    }
+  ]
+}
+{% endschema %}

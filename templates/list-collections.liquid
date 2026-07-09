@@ -1,0 +1,21 @@
+{% comment %} VCN — list of all collections {% endcomment %}
+<div class="vcn-page">
+  <h1>Bộ Sưu Tập</h1>
+  <div class="vcn-list-collections">
+    {% for collection in collections %}
+      <a href="{{ collection.url }}" class="vcn-list-collections__item">
+        {% if collection.image %}
+          <img src="{{ collection.image | img_url: '500x350', crop: 'center' }}" alt="{{ collection.title }}">
+        {% endif %}
+        <span>{{ collection.title }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<style>
+.vcn-list-collections { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 1.2rem; }
+.vcn-list-collections__item { display: block; text-decoration: none; color: #fff; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+.vcn-list-collections__item img { width: 100%; aspect-ratio: 10/7; object-fit: cover; }
+.vcn-list-collections__item span { display: block; padding: 0.8rem; font-weight: 600; }
+</style>

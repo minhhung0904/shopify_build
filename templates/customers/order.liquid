@@ -1,0 +1,36 @@
+{% comment %} VCN Customer order detail {% endcomment %}
+<div class="vcn-page">
+  <a href="{{ routes.account_url }}" style="color:rgba(255,255,255,0.5);">&larr; {{ 'customer.account.return' | t }}</a>
+  <h1>{{ 'customer.orders.order_number' | t }} {{ order.name }}</h1>
+  <p style="color:rgba(255,255,255,0.5);">{{ order.created_at | date: '%d %b, %Y' }}</p>
+
+  <table class="vcn-table">
+    <thead>
+      <tr>
+        <th>Sản phẩm</th>
+        <th>Giá</th>
+        <th>Số lượng</th>
+        <th>Tổng</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line_item in order.line_items %}
+        <tr>
+          <td>{{ line_item.title }}</td>
+          <td>{{ line_item.original_price | money }}</td>
+          <td>{{ line_item.quantity }}</td>
+          <td>{{ line_item.final_line_price | money }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="text-align:right;margin-top:1.5rem;">
+    <p>{{ 'customer.orders.total' | t }}: <strong>{{ order.total_price | money }}</strong></p>
+    <p>{{ 'customer.orders.payment_status' | t }}: {{ order.financial_status_label }}</p>
+    <p>{{ 'customer.orders.fulfillment_status' | t }}: {{ order.fulfillment_status_label }}</p>
+  </div>
+
+  <h3 style="margin-top:2rem;">Địa chỉ giao hàng</h3>
+  <p>{{ order.shipping_address | format_address }}</p>
+</div>

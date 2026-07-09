@@ -1,0 +1,32 @@
+{% comment %} VCN Gift card issuance page {% endcomment %}
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ 'gift_cards.issued.title' | t: value: gift_card.initial_value | money, shop: shop.name }}</title>
+  {{ 'vcn-base.css' | asset_url | stylesheet_tag }}
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .vcn-gift-card { text-align: center; padding: 3rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; max-width: 480px; }
+    .vcn-gift-card__code { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.05em; padding: 1rem; background: rgba(139,92,246,0.1); border-radius: 10px; margin: 1.5rem 0; }
+    @media print { .vcn-no-print { display: none; } }
+  </style>
+</head>
+<body class="vcn-body">
+  <div class="vcn-gift-card">
+    <h1>{{ gift_card.initial_value | money }}</h1>
+    <p>{{ 'gift_cards.issued.subtext' | t }}</p>
+    <div class="vcn-gift-card__code">{{ gift_card.code | format_code }}</div>
+    {% if gift_card.expired %}
+      <p>{{ 'gift_cards.issued.expired' | t }}</p>
+    {% elsif gift_card.expires_on %}
+      <p>{{ 'gift_cards.issued.expires_on' | t: expires_on: gift_card.expires_on }}</p>
+    {% endif %}
+    <div class="vcn-no-print" style="margin-top:1.5rem;display:flex;gap:1rem;justify-content:center;">
+      <a href="{{ shop.url }}" class="vcn-btn vcn-btn--outline">{{ 'gift_cards.issued.shop_link' | t }}</a>
+      <button onclick="window.print()" class="vcn-btn">{{ 'gift_cards.issued.print' | t }}</button>
+    </div>
+  </div>
+</body>
+</html>

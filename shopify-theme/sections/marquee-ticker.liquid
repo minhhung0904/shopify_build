@@ -1,0 +1,148 @@
+{%- style -%}
+  .marquee-{{ section.id }} {
+    overflow: hidden;
+    padding: {{ section.settings.padding_mobile }}px 0;
+  }
+
+  @media screen and (min-width: 750px) {
+    .marquee-{{ section.id }} {
+      padding: {{ section.settings.padding_desktop }}px 0;
+    }
+  }
+
+  .marquee-{{ section.id }} .marquee__track {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll-{{ section.id }} {{ section.settings.speed }}s linear infinite;
+  }
+
+  .marquee-{{ section.id }}:hover .marquee__track {
+    animation-play-state: {% if section.settings.pause_on_hover %}paused{% else %}running{% endif %};
+  }
+
+  .marquee-{{ section.id }} .marquee__item {
+    flex: 0 0 auto;
+    padding: 0 3rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  @media screen and (min-width: 750px) {
+    .marquee-{{ section.id }} .marquee__item {
+      font-size: 1.5rem;
+    }
+  }
+
+  @keyframes marquee-scroll-{{ section.id }} {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-{{ section.id }} .marquee__track {
+      animation: none;
+    }
+  }
+{%- endstyle -%}
+
+<div class="marquee-{{ section.id }} color-{{ section.settings.color_scheme }} gradient">
+  <div class="marquee__track" aria-hidden="false">
+    {%- for i in (1..2) -%}
+      {%- for block in section.blocks -%}
+        {%- if block.settings.link != blank -%}
+          <a href="{{ block.settings.link }}" class="marquee__item link" {{ block.shopify_attributes }}>{{ block.settings.text }}</a>
+        {%- else -%}
+          <p class="marquee__item" {{ block.shopify_attributes }}>{{ block.settings.text }}</p>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endfor -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Marquee ticker",
+  "tag": "div",
+  "class": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-5"
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "min": 10,
+      "max": 60,
+      "step": 2,
+      "unit": "s",
+      "label": "Scroll speed (lower = faster)",
+      "default": 28
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_on_hover",
+      "label": "Pause on hover",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "padding_mobile",
+      "min": 4,
+      "max": 30,
+      "step": 1,
+      "unit": "px",
+      "label": "Padding (mobile)",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "padding_desktop",
+      "min": 4,
+      "max": 30,
+      "step": 1,
+      "unit": "px",
+      "label": "Padding (desktop)",
+      "default": 16
+    }
+  ],
+  "blocks": [
+    {
+      "type": "message",
+      "name": "Message",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "default": "New arrivals every week",
+          "label": "Text"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link (optional)"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Marquee ticker",
+      "blocks": [
+        { "type": "message", "settings": { "text": "New arrivals every week" } },
+        { "type": "message", "settings": { "text": "Limited time offers" } },
+        { "type": "message", "settings": { "text": "Free shipping on all orders" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

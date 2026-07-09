@@ -1,0 +1,91 @@
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body.vcn-body {
+  margin: 0;
+  background: #0a0a0f;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+a { color: inherit; }
+img { max-width: 100%; }
+
+.vcn-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: #8B5CF6;
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  z-index: 1000;
+  border-radius: 0 0 8px 0;
+}
+.vcn-skip-link:focus { left: 0; }
+
+.vcn-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 4rem 5vw;
+  min-height: 60vh;
+}
+.vcn-page h1 {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+}
+.vcn-page__body { color: rgba(255,255,255,0.7); line-height: 1.8; }
+.vcn-page__body img { border-radius: 12px; }
+
+.vcn-form-field { margin-bottom: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.vcn-form-field label { font-size: 0.85rem; color: rgba(255,255,255,0.6); }
+.vcn-form-field input,
+.vcn-form-field textarea,
+.vcn-form-field select {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  color: #fff;
+  font-size: 0.95rem;
+}
+.vcn-form-field input:focus,
+.vcn-form-field textarea:focus,
+.vcn-form-field select:focus { outline: none; border-color: #8B5CF6; }
+
+.vcn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 1.5rem;
+  border-radius: 10px;
+  background: #8B5CF6;
+  color: #fff;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.vcn-btn:hover { background: #7c3aed; }
+.vcn-btn--outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.85);
+}
+.vcn-btn--outline:hover { border-color: #8B5CF6; color: #fff; }
+
+.vcn-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+.vcn-table th, .vcn-table td {
+  text-align: left;
+  padding: 0.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.9rem;
+}
+.vcn-table th { color: rgba(255,255,255,0.5); font-weight: 600; }
+
+.vcn-empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: rgba(255,255,255,0.4);
+}

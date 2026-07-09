@@ -1,0 +1,47 @@
+# Chạy 1 lần để tạo kiểu nội dung "Bundle" trong Admin -> Content -> Metaobjects.
+# Cách chạy: shopify store execute --store <your-store>.myshopify.com --file create_bundle_metaobject.graphql
+# (cần quyền: write_metaobject_definitions)
+# Sau khi tạo xong, bạn thêm/sửa bundle trực tiếp qua Admin UI, không cần GraphQL nữa.
+
+mutation CreateBundleDefinition($definition: MetaobjectDefinitionCreateInput!) {
+  metaobjectDefinitionCreate(definition: $definition) {
+    metaobjectDefinition {
+      id
+      name
+      type
+      fieldDefinitions {
+        name
+        key
+        type {
+          name
+        }
+      }
+    }
+    userErrors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Variables (dùng khi gọi qua GraphQL client hỗ trợ variables; nếu chạy qua
+# `shopify store execute` với 1 file .graphql duy nhất, dán phần variables
+# này vào flag --variables hoặc theo hướng dẫn CLI hiện tại).
+#
+# {
+#   "definition": {
+#     "type": "bundle",
+#     "name": "Bundle",
+#     "displayNameKey": "title",
+#     "access": { "storefront": "PUBLIC_READ" },
+#     "fieldDefinitions": [
+#       { "key": "title", "name": "Title", "type": "single_line_text_field", "required": true },
+#       { "key": "badge_text", "name": "Badge text", "type": "single_line_text_field" },
+#       { "key": "image", "name": "Image", "type": "file_reference" },
+#       { "key": "products", "name": "Products", "type": "list.product_reference", "required": true },
+#       { "key": "price", "name": "Bundle price", "type": "number_decimal" },
+#       { "key": "description", "name": "Description", "type": "multi_line_text_field" }
+#     ]
+#   }
+# }

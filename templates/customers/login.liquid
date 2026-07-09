@@ -1,0 +1,30 @@
+{% comment %} VCN Customer login {% endcomment %}
+<div class="vcn-page" style="max-width:420px;">
+  <h1>{{ 'customer.login_page.title' | t }}</h1>
+
+  {% form 'customer_login' %}
+    {% if form.errors %}
+      <p style="color:#f87171;">{{ form.errors | default_errors }}</p>
+    {% endif %}
+    <div class="vcn-form-field">
+      <label for="CustomerEmail">{{ 'customer.login_page.email' | t }}</label>
+      <input type="email" name="customer[email]" id="CustomerEmail" required>
+    </div>
+    {% if form.password_needed %}
+      <div class="vcn-form-field">
+        <label for="CustomerPassword">{{ 'customer.login_page.password' | t }}</label>
+        <input type="password" name="customer[password]" id="CustomerPassword" required>
+      </div>
+    {% endif %}
+    <button type="submit" class="vcn-btn">{{ 'customer.login_page.sign_in' | t }}</button>
+    <a href="{{ routes.account_recover_url }}" style="display:block;margin-top:1rem;color:rgba(255,255,255,0.5);">
+      {{ 'customer.login_page.forgot_password' | t }}
+    </a>
+  {% endform %}
+
+  <p style="margin-top:2rem;">
+    <a href="{{ routes.account_register_url }}" class="vcn-btn vcn-btn--outline">
+      {{ 'customer.login_page.create_account' | t }}
+    </a>
+  </p>
+</div>

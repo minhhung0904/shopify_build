@@ -1,0 +1,67 @@
+{
+  "name": "t:sections.header.name",
+  "type": "header",
+  "sections": {
+    "marquee-ticker": {
+      "type": "marquee-ticker",
+      "settings": {
+        "color_scheme": "scheme-5",
+        "speed": 28,
+        "pause_on_hover": true,
+        "padding_mobile": 12,
+        "padding_desktop": 16
+      },
+      "blocks": {
+        "marquee-0": {
+          "type": "message",
+          "settings": {
+            "text": "New arrivals every week",
+            "link": ""
+          }
+        },
+        "marquee-1": {
+          "type": "message",
+          "settings": {
+            "text": "Limited time offers",
+            "link": ""
+          }
+        },
+        "marquee-2": {
+          "type": "message",
+          "settings": {
+            "text": "Free shipping on all orders",
+            "link": ""
+          }
+        }
+      },
+      "block_order": [
+        "marquee-0",
+        "marquee-1",
+        "marquee-2"
+      ]
+    },
+    "header": {
+      "type": "header",
+      "settings": {
+        "color_scheme": "scheme-1",
+        "menu_color_scheme": "scheme-1",
+        "logo_position": "middle-center",
+        "menu": "main-menu",
+        "menu_type_desktop": "dropdown",
+        "sticky_header_type": "on-scroll-up",
+        "show_line_separator": true,
+        "enable_country_selector": false,
+        "enable_language_selector": false,
+        "enable_customer_avatar": true,
+        "mobile_logo_position": "center",
+        "margin_bottom": 0,
+        "padding_top": 20,
+        "padding_bottom": 20
+      }
+    }
+  },
+  "order": [
+    "marquee-ticker",
+    "header"
+  ]
+}
