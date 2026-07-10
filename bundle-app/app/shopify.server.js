@@ -4,8 +4,7 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-import prisma from "./db.server";
+import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mongodb";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -14,7 +13,10 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: new MongoDBSessionStorage(
+    new URL(process.env.DATABASE_URL),
+    process.env.MONGO_DB_NAME || "bundle-app",
+  ),
   distribution: AppDistribution.AppStore,
   future: {
     expiringOfflineAccessTokens: true,

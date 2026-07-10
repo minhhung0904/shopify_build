@@ -1,13 +1,15 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "0b2890ff9c1df55649886e9bcb71f0c4"
-application_url = "https://example.com"
+client_id = "ee5c4f985ace5900a20391adc0e1d6e6"
+application_url = "https://shopify-build.onrender.com"
 embedded = true
-name = "bundle-app"
+name = "BundleVCN"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products,write_metaobjects,write_metaobject_definitions"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [metaobjects.app.bundle]
 name = "Bundle"
@@ -55,7 +57,7 @@ api_version = "2026-10"
   topics = [ "app/scopes_update" ]
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://shopify-build.onrender.com/auth/callback" ]
 
 [build]
 automatically_update_urls_on_dev = true

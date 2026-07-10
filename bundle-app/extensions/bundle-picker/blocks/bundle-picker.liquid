@@ -144,22 +144,7 @@
     {%- endif -%}
 
     <ul class="bp-grid" role="list">
-      {%- comment -%} 1) Bundles authored directly in the Theme Editor as blocks {%- endcomment -%}
-      {%- for child_block in block.blocks -%}
-        {%- if child_block.type == 'manual_bundle' -%}
-          {%- render 'bundle-card',
-            block_id: block.id,
-            title: child_block.settings.title,
-            badge_text: child_block.settings.badge_text,
-            price_text: child_block.settings.price,
-            image: child_block.settings.image,
-            products: child_block.settings.products,
-            child_attrs: child_block.shopify_attributes
-          -%}
-        {%- endif -%}
-      {%- endfor -%}
-
-      {%- comment -%} 2) Bundles managed centrally via the app's "Bundle" metaobject {%- endcomment -%}
+      {%- comment -%} Bundles managed centrally via the app's "Bundle" metaobject {%- endcomment -%}
       {%- if block.settings.show_metaobject_bundles -%}
         {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
           {%- liquid
@@ -259,44 +244,6 @@
       "unit": "px",
       "label": "Bottom padding",
       "default": 60
-    }
-  ],
-  "blocks": [
-    {
-      "type": "manual_bundle",
-      "name": "Bundle (manual)",
-      "settings": [
-        {
-          "type": "image_picker",
-          "id": "image",
-          "label": "Image"
-        },
-        {
-          "type": "text",
-          "id": "title",
-          "default": "Starter bundle",
-          "label": "Title"
-        },
-        {
-          "type": "text",
-          "id": "badge_text",
-          "default": "Save 15%",
-          "label": "Badge text"
-        },
-        {
-          "type": "text",
-          "id": "price",
-          "default": "$49.99",
-          "label": "Bundle price (display text)",
-          "info": "Display only. Create a matching Shopify discount so the price is enforced at checkout."
-        },
-        {
-          "type": "product_list",
-          "id": "products",
-          "label": "Products in this bundle",
-          "limit": 6
-        }
-      ]
     }
   ]
 }
