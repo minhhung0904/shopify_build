@@ -31,21 +31,68 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Per-line sale price + you save */
+  /* Compact line layout: media | details | price column */
+  #CartDrawer .cart-item {
+    grid-template: auto auto / 5rem minmax(0, 1fr) max-content;
+    column-gap: 1.2rem;
+  }
+
+  /* Keep image inside its column so it never overlaps the text */
+  #CartDrawer .cart-item__media {
+    width: 5rem;
+    overflow: hidden;
+    align-self: start;
+  }
+
+  #CartDrawer .cart-item__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+  }
+
+  #CartDrawer .cart-item__details {
+    grid-column: 2 / 3;
+    min-width: 0;
+  }
+
+  #CartDrawer .cart-item__totals {
+    grid-column: 3 / 4;
+    text-align: right;
+  }
+
+  #CartDrawer .cart-item__quantity {
+    grid-column: 2 / 4;
+  }
+
+  /* Per-line price stack: original, sale, you save */
+  #CartDrawer .cart-item__price-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+    line-height: 1.2;
+  }
+
   #CartDrawer .cart-item__old-price {
     color: rgba(var(--color-foreground), 0.55);
     text-decoration: line-through;
+    font-size: 1.3rem;
+    white-space: nowrap;
   }
 
   #CartDrawer .cart-item__final-price {
     color: #f58220;
+    font-size: 1.6rem;
+    font-weight: 700;
+    white-space: nowrap;
   }
 
   #CartDrawer .cart-item__save {
-    margin-top: 0.4rem;
     font-weight: 700;
     color: #111111;
     font-size: 1.2rem;
+    white-space: nowrap;
   }
 
   /* Footer: savings + subtotal rows */
@@ -291,47 +338,6 @@
                             -%}
                           </div>
 
-                          {%- liquid
-                            assign has_line_discount = false
-                            if item.original_price != item.final_price
-                              assign has_line_discount = true
-                            endif
-                            assign has_compare = false
-                            if item.variant.compare_at_price and item.variant.compare_at_price > item.final_price
-                              assign has_compare = true
-                            endif
-                          -%}
-                          {%- if has_line_discount or has_compare -%}
-                            <div class="cart-item__discounted-prices">
-                              <span class="visually-hidden">
-                                {{ 'products.product.price.regular_price' | t }}
-                              </span>
-                              <s class="cart-item__old-price product-option">
-                                {%- if has_compare -%}
-                                  {{- item.variant.compare_at_price | money -}}
-                                {%- else -%}
-                                  {{- item.original_price | money -}}
-                                {%- endif -%}
-                              </s>
-                              <span class="visually-hidden">
-                                {{ 'products.product.price.sale_price' | t }}
-                              </span>
-                              <strong class="cart-item__final-price product-option">
-                                {{ item.final_price | money }}
-                              </strong>
-                            </div>
-                            {%- if has_compare -%}
-                              {%- assign line_save = item.variant.compare_at_price | minus: item.final_price | times: item.quantity -%}
-                            {%- else -%}
-                              {%- assign line_save = item.original_price | minus: item.final_price | times: item.quantity -%}
-                            {%- endif -%}
-                            <div class="cart-item__save">(You save {{ line_save | money }})</div>
-                          {%- else -%}
-                            <div class="product-option">
-                              {{ item.original_price | money }}
-                            </div>
-                          {%- endif -%}
-
                           {%- if item.product.has_only_default_variant == false
                             or item.properties.size != 0
                             or item.selling_plan_allocation != null
@@ -392,26 +398,36 @@
 
                         <td class="cart-item__totals right" role="cell" headers="CartDrawer-ColumnTotal">
                           {%- render 'loading-spinner' -%}
+                          {%- liquid
+                            assign has_compare = false
+                            if item.variant.compare_at_price and item.variant.compare_at_price > item.final_price
+                              assign has_compare = true
+                            endif
+                            assign has_line_discount = false
+                            if item.original_line_price != item.final_line_price
+                              assign has_line_discount = true
+                            endif
+                            if has_compare
+                              assign old_line_price = item.variant.compare_at_price | times: item.quantity
+                              assign line_save = old_line_price | minus: item.final_line_price
+                            elsif has_line_discount
+                              assign old_line_price = item.original_line_price
+                              assign line_save = item.original_line_price | minus: item.final_line_price
+                            endif
+                          -%}
                           <div class="cart-item__price-wrapper">
-                            {%- if item.original_line_price != item.final_line_price -%}
-                              <div class="cart-item__discounted-prices">
-                                <span class="visually-hidden">
-                                  {{ 'products.product.price.regular_price' | t }}
-                                </span>
-                                <s class="cart-item__old-price price price--end">
-                                  {{ item.original_line_price | money }}
-                                </s>
-                                <span class="visually-hidden">
-                                  {{ 'products.product.price.sale_price' | t }}
-                                </span>
-                                <span class="price price--end">
-                                  {{ item.final_line_price | money }}
-                                </span>
-                              </div>
+                            {%- if has_compare or has_line_discount -%}
+                              <s class="cart-item__old-price">
+                                <span class="visually-hidden">{{ 'products.product.price.regular_price' | t }}</span>
+                                {{ old_line_price | money }}
+                              </s>
+                              <strong class="cart-item__final-price">
+                                <span class="visually-hidden">{{ 'products.product.price.sale_price' | t }}</span>
+                                {{ item.final_line_price | money }}
+                              </strong>
+                              <div class="cart-item__save">(You save {{ line_save | money }})</div>
                             {%- else -%}
-                              <span class="price price--end">
-                                {{ item.original_line_price | money }}
-                              </span>
+                              <strong class="cart-item__final-price">{{ item.final_line_price | money }}</strong>
                             {%- endif -%}
 
                             {%- if item.variant.available and item.unit_price_measurement -%}

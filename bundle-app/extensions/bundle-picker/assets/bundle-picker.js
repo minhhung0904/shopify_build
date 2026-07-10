@@ -368,8 +368,160 @@ class BundleBogo extends HTMLElement {
   }
 }
 
+// Tiered "Bundle & Save": choose a tier (1/2/3 units), then pick a variant per
+// slot via swatches. Discount escalates by tier; all slot lines share the
+// bundle grouping so the function applies the tier discount at checkout.
+class BundleTiered extends HTMLElement {
+  connectedCallback() {
+    this.variants = this.parseVariants();
+    this.slotsEl = this.querySelector('[data-bp-slots]');
+    this.priceEl = this.querySelector('[data-bundle-price]');
+    this.compareEl = this.querySelector('[data-bundle-compare]');
+    this.submitBtn = this.querySelector('[data-bundle-submit]');
+    this.errorEl = this.querySelector('[data-bundle-error]');
+    this.radios = Array.from(this.querySelectorAll('.bp-tierrow__radio'));
+    this.selection = [];
+    if (!this.submitBtn || !this.radios.length || !this.variants.length) return;
+
+    this.radios.forEach((r) =>
+      r.addEventListener('change', () => this.onTierChange()),
+    );
+    this.submitBtn.addEventListener('click', () => this.onSubmit());
+
+    const checked = this.radios.find((r) => r.checked) || this.radios[0];
+    checked.checked = true;
+    this.onTierChange();
+  }
+
+  parseVariants() {
+    const script = this.querySelector('[data-bp-variants]');
+    try {
+      return JSON.parse(script.textContent);
+    } catch {
+      return [];
+    }
+  }
+
+  availableVariants() {
+    const avail = this.variants.filter((v) => v.available);
+    return avail.length ? avail : this.variants;
+  }
+
+  currentTier() {
+    const r = this.radios.find((x) => x.checked) || this.radios[0];
+    return {
+      quantity: Math.max(1, Number(r.dataset.quantity) || 1),
+      discountType: r.dataset.discountType,
+      discountValue: Number(r.dataset.discountValue) || 0,
+    };
+  }
+
+  onTierChange() {
+    this.radios.forEach((r) =>
+      r
+        .closest('.bp-tierrow')
+        ?.classList.toggle('is-selected', r.checked),
+    );
+    const tier = this.currentTier();
+    const avail = this.availableVariants();
+    const next = [];
+    for (let i = 0; i < tier.quantity; i++) {
+      const prev = this.selection[i];
+      const stillValid =
+        prev != null &&
+        this.variants.some(
+          (v) => String(v.id) === String(prev) && v.available,
+        );
+      next.push(stillValid ? prev : avail[i % avail.length]?.id ?? avail[0]?.id);
+    }
+    this.selection = next;
+    this.renderSlots(tier);
+    this.render();
+  }
+
+  renderSlots(tier) {
+    if (!this.slotsEl) return;
+    this.slotsEl.innerHTML = '';
+    for (let slot = 0; slot < tier.quantity; slot++) {
+      const group = document.createElement('div');
+      group.className = 'bp-slot';
+
+      const label = document.createElement('span');
+      label.className = 'bp-slot__label';
+      label.textContent = tier.quantity > 1 ? `Item ${slot + 1}` : 'Choose your item';
+      group.appendChild(label);
+
+      const swatches = document.createElement('div');
+      swatches.className = 'bp-swatches';
+      this.variants.forEach((v) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bp-swatch';
+        btn.title = v.title;
+        if (!v.available) btn.disabled = true;
+        if (String(this.selection[slot]) === String(v.id)) {
+          btn.classList.add('is-selected');
+        }
+        if (v.image) {
+          const img = document.createElement('img');
+          img.src = v.image;
+          img.alt = v.title;
+          img.loading = 'lazy';
+          btn.appendChild(img);
+        } else {
+          btn.textContent = v.title;
+        }
+        btn.addEventListener('click', () => {
+          this.selection[slot] = v.id;
+          this.renderSlots(this.currentTier());
+          this.render();
+        });
+        swatches.appendChild(btn);
+      });
+      group.appendChild(swatches);
+      this.slotsEl.appendChild(group);
+    }
+  }
+
+  render() {
+    const tier = this.currentTier();
+    const base = this.selection.reduce((sum, id) => {
+      const v = this.variants.find((x) => String(x.id) === String(id));
+      return sum + (v ? v.price : 0);
+    }, 0);
+    const discounted = applyDiscount(base, tier.discountType, tier.discountValue);
+    if (this.priceEl) {
+      this.priceEl.textContent = formatMoney(discounted, this.dataset.currency);
+    }
+    if (this.compareEl) {
+      const show = discounted < base;
+      this.compareEl.textContent = show
+        ? formatMoney(base, this.dataset.currency)
+        : '';
+      this.compareEl.style.display = show ? '' : 'none';
+    }
+  }
+
+  onSubmit() {
+    const lines = this.selection
+      .filter((id) => id != null)
+      .map((id) => ({ id, quantity: 1 }));
+    if (!lines.length) return;
+    addBundleToCart({
+      lines,
+      bundleHandle: this.dataset.bundleHandle,
+      bundleTitle: this.dataset.bundleTitle,
+      cartAddUrl: this.dataset.cartAddUrl,
+      cartUrl: this.dataset.cartUrl,
+      submitBtn: this.submitBtn,
+      errorEl: this.errorEl,
+    });
+  }
+}
+
 customElements.define('bundle-add-to-cart', BundleFixed);
 customElements.define('bundle-mix-match', BundleMixMatch);
 customElements.define('bundle-volume', BundleVolume);
 customElements.define('bundle-multipack', BundleMultipack);
 customElements.define('bundle-bogo', BundleBogo);
+customElements.define('bundle-tiered', BundleTiered);

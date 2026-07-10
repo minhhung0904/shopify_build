@@ -1,0 +1,50 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "100.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/50",
+              "product": { "id": "gid://shopify/Product/50" }
+            },
+            "bundleHandle": { "value": "bundle-tiered-1" },
+            "bundleInstance": { "value": "instance-9" }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "100.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/98",
+              "product": { "id": "gid://shopify/Product/98" }
+            },
+            "bundleHandle": { "value": "bundle-tiered-1" },
+            "bundleInstance": { "value": "instance-9" }
+          }
+        ]
+      },
+      "discount": { "discountClasses": ["PRODUCT"] },
+      "shop": {
+        "bundleIndex": {
+          "jsonValue": {
+            "bundle-tiered-1": {
+              "type": "tiered",
+              "productId": "gid://shopify/Product/50",
+              "productIds": ["gid://shopify/Product/50"],
+              "tiers": [
+                { "quantity": 2, "discountType": "percentage", "discountValue": 15 }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "output": { "operations": [] }
+  }
+}

@@ -52,6 +52,13 @@ const BUNDLE_TYPES = [
       "Quantity-break tiers on a single product — bigger discount at higher counts.",
   },
   {
+    value: "tiered",
+    label: "Tiered bundle (Bundle & Save)",
+    tagline: "Pick a tier, mix variants, save more",
+    description:
+      "Offer 1/2/3-unit tiers of one product with escalating discounts. Each unit can be a different variant.",
+  },
+  {
     value: "bogo",
     label: "BOGO",
     tagline: "Buy X, get Y",
@@ -77,7 +84,7 @@ const usesDiscount = (type) =>
 const usesMinMax = (type) => ["mix_match", "variant"].includes(type);
 const usesMinOnly = (type) => type === "infinite";
 const usesSingleProduct = (type) =>
-  ["volume", "multipack", "variant"].includes(type);
+  ["volume", "multipack", "variant", "tiered"].includes(type);
 
 const emptyForm = {
   handle: "",
@@ -102,6 +109,12 @@ const emptyForm = {
   rewardDiscountType: "percentage",
   rewardDiscountValue: "100",
   rewardProducts: [],
+  // tiered (Bundle & Save): each tier = N units of the product at a discount
+  tieredTiers: [
+    { title: "Single", quantity: "1", discountType: "percentage", value: "0", mostPopular: false },
+    { title: "Double", quantity: "2", discountType: "percentage", value: "10", mostPopular: true },
+    { title: "Triple", quantity: "3", discountType: "percentage", value: "15", mostPopular: false },
+  ],
 };
 
 const BUNDLE_FIELDS = `#graphql
@@ -179,6 +192,15 @@ function buildIndexEntry(node) {
       volumeTiers = [];
     }
     return { type, productId: productIds[0], productIds, volumeTiers };
+  }
+
+  if (type === "tiered") {
+    const tiers = (config.tiers || []).map((t) => ({
+      quantity: Number(t.quantity) || 1,
+      discountType: t.discountType || "percentage",
+      discountValue: Number(t.discountValue) || 0,
+    }));
+    return { type, productId: productIds[0], productIds, tiers };
   }
 
   if (type === "bogo") {
@@ -391,6 +413,16 @@ function formatDiscount(bundle) {
     }
     return `${tiers.length} volume tier${tiers.length === 1 ? "" : "s"}`;
   }
+  if (type === "tiered") {
+    let config = {};
+    try {
+      config = JSON.parse(bundle.config?.value || "{}");
+    } catch {
+      config = {};
+    }
+    const n = (config.tiers || []).length;
+    return `${n} tier${n === 1 ? "" : "s"} (Bundle & Save)`;
+  }
   if (type === "bogo") {
     let config = {};
     try {
@@ -422,6 +454,10 @@ function formatFormDiscount(form) {
   if (form.bundleType === "volume") {
     const n = form.volumeTiers.length;
     return `${n} volume tier${n === 1 ? "" : "s"}`;
+  }
+  if (form.bundleType === "tiered") {
+    const n = form.tieredTiers.length;
+    return `${n} tier${n === 1 ? "" : "s"} (Bundle & Save)`;
   }
   if (form.bundleType === "bogo") {
     const reward =
@@ -507,6 +543,16 @@ export default function Bundles() {
       rewardProducts: (bundle.rewardProducts?.references?.nodes || []).map(
         (p) => ({ id: p.id, title: p.title }),
       ),
+      tieredTiers:
+        Array.isArray(config.tiers) && config.tiers.length
+          ? config.tiers.map((t) => ({
+              title: t.title || "",
+              quantity: String(t.quantity ?? "1"),
+              discountType: t.discountType || "percentage",
+              value: String(t.discountValue ?? "0"),
+              mostPopular: !!t.mostPopular,
+            }))
+          : emptyForm.tieredTiers,
     });
     setView("editor");
   };
@@ -574,6 +620,40 @@ export default function Bundles() {
       ),
     }));
 
+  const addTieredTier = () =>
+    setForm((prev) => ({
+      ...prev,
+      tieredTiers: [
+        ...prev.tieredTiers,
+        {
+          title: "",
+          quantity: String(prev.tieredTiers.length + 1),
+          discountType: "percentage",
+          value: "",
+          mostPopular: false,
+        },
+      ],
+    }));
+
+  const removeTieredTier = (index) =>
+    setForm((prev) => ({
+      ...prev,
+      tieredTiers: prev.tieredTiers.filter((_, i) => i !== index),
+    }));
+
+  const updateTieredTier = (index, key, value) =>
+    setForm((prev) => ({
+      ...prev,
+      tieredTiers: prev.tieredTiers.map((tier, i) =>
+        // "most popular" is exclusive — only one tier can be preselected
+        key === "mostPopular" && value
+          ? { ...tier, mostPopular: i === index }
+          : i === index
+            ? { ...tier, [key]: value }
+            : tier,
+      ),
+    }));
+
   const buildConfig = () => {
     if (form.bundleType === "multipack") {
       return { packSize: Number(form.packSize) || 1 };
@@ -584,6 +664,17 @@ export default function Bundles() {
         getQuantity: Number(form.getQuantity) || 1,
         rewardDiscountType: form.rewardDiscountType,
         rewardDiscountValue: Number(form.rewardDiscountValue) || 0,
+      };
+    }
+    if (form.bundleType === "tiered") {
+      return {
+        tiers: form.tieredTiers.map((t) => ({
+          title: t.title,
+          quantity: Number(t.quantity) || 1,
+          discountType: t.discountType,
+          discountValue: Number(t.value) || 0,
+          mostPopular: !!t.mostPopular,
+        })),
       };
     }
     return {};
@@ -651,6 +742,7 @@ export default function Bundles() {
     mix_match: "Choose eligible products",
     infinite: "Choose eligible products",
     volume: "Choose product",
+    tiered: "Choose the product",
     bogo: "Choose “Buy” products",
   }[form.bundleType];
 
@@ -964,6 +1056,67 @@ export default function Bundles() {
                 </s-stack>
               ))}
               <s-button onClick={addTierRow}>Add tier</s-button>
+            </s-stack>
+          ) : null}
+
+          {form.bundleType === "tiered" ? (
+            <s-stack direction="block" gap="base">
+              <s-text>Tiers — each tier is a number of units at a discount</s-text>
+              {form.tieredTiers.map((tier, index) => (
+                <s-stack
+                  key={index}
+                  direction="inline"
+                  gap="base"
+                  alignItems="center"
+                >
+                  <s-text-field
+                    label="Tier name"
+                    value={tier.title}
+                    onInput={(e) =>
+                      updateTieredTier(index, "title", e.target.value)
+                    }
+                  ></s-text-field>
+                  <s-number-field
+                    label="Units"
+                    value={tier.quantity}
+                    onInput={(e) =>
+                      updateTieredTier(index, "quantity", e.target.value)
+                    }
+                  ></s-number-field>
+                  <s-select
+                    label="Discount type"
+                    value={tier.discountType}
+                    onChange={(e) =>
+                      updateTieredTier(index, "discountType", e.target.value)
+                    }
+                  >
+                    <s-option value="percentage">Percentage off</s-option>
+                    <s-option value="fixed_amount">Amount off</s-option>
+                  </s-select>
+                  <s-number-field
+                    label="Value"
+                    value={tier.value}
+                    onInput={(e) =>
+                      updateTieredTier(index, "value", e.target.value)
+                    }
+                  ></s-number-field>
+                  <s-switch
+                    label="Popular"
+                    checked={tier.mostPopular}
+                    onChange={(e) =>
+                      updateTieredTier(index, "mostPopular", e.target.checked)
+                    }
+                  ></s-switch>
+                  <s-button
+                    variant="tertiary"
+                    tone="critical"
+                    onClick={() => removeTieredTier(index)}
+                  >
+                    Remove
+                  </s-button>
+                </s-stack>
+              ))}
+              <s-button onClick={addTieredTier}>Add tier</s-button>
             </s-stack>
           ) : null}
 

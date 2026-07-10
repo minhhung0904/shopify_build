@@ -71,6 +71,16 @@ function buildCandidate(bundle, lines) {
     return discountCandidate([line], tier.discountType, tier.value);
   }
 
+  // Tiered "Bundle & Save": one product, several variants allowed. The tier is
+  // chosen by the total unit count across the grouped lines; its discount
+  // applies to every line in the group.
+  if (bundle.type === 'tiered') {
+    const total = lines.reduce((sum, line) => sum + line.quantity, 0);
+    const tier = pickTieredTier(bundle.tiers, total);
+    if (!tier) return null;
+    return discountCandidate(lines, tier.discountType, tier.discountValue);
+  }
+
   // BOGO discounts only the "get" lines; the "buy" lines stay full price.
   if (bundle.type === 'bogo') {
     const getSet = new Set(bundle.getProductIds || []);
@@ -116,6 +126,17 @@ function isValidGroup(bundle, lines) {
     const min = Number(bundle.minItems) || 1;
     const max = Number(bundle.maxItems) || count;
     return count >= min && count <= max;
+  }
+
+  // Tiered: every line must be the configured product (any variant), and the
+  // total units must reach at least the smallest tier.
+  if (bundle.type === 'tiered') {
+    if (productIds.some((id) => !id || id !== bundle.productId)) return false;
+    const total = lines.reduce((sum, line) => sum + line.quantity, 0);
+    const tiers = bundle.tiers || [];
+    if (!tiers.length) return false;
+    const smallest = Math.min(...tiers.map((t) => Number(t.quantity) || 1));
+    return total >= smallest;
   }
 
   // Multipack: a single line of one configured product, quantity ≥ pack size.
@@ -176,6 +197,13 @@ function pickVolumeTier(tiers, quantity) {
   return (tiers || [])
     .filter((tier) => quantity >= Number(tier.minQuantity))
     .sort((a, b) => Number(b.minQuantity) - Number(a.minQuantity))[0];
+}
+
+// Highest tier whose unit threshold the cart meets — "buy more, save more".
+function pickTieredTier(tiers, totalQuantity) {
+  return (tiers || [])
+    .filter((tier) => totalQuantity >= Number(tier.quantity))
+    .sort((a, b) => Number(b.quantity) - Number(a.quantity))[0];
 }
 
 function fixedPriceDiscountAmount(lines, targetPrice) {

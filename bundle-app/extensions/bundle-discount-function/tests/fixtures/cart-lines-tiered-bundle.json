@@ -1,0 +1,70 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "100.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/50",
+              "product": { "id": "gid://shopify/Product/50" }
+            },
+            "bundleHandle": { "value": "bundle-tiered-1" },
+            "bundleInstance": { "value": "instance-7" }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "100.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/51",
+              "product": { "id": "gid://shopify/Product/50" }
+            },
+            "bundleHandle": { "value": "bundle-tiered-1" },
+            "bundleInstance": { "value": "instance-7" }
+          }
+        ]
+      },
+      "discount": { "discountClasses": ["PRODUCT"] },
+      "shop": {
+        "bundleIndex": {
+          "jsonValue": {
+            "bundle-tiered-1": {
+              "type": "tiered",
+              "productId": "gid://shopify/Product/50",
+              "productIds": ["gid://shopify/Product/50"],
+              "tiers": [
+                { "quantity": 1, "discountType": "percentage", "discountValue": 0 },
+                { "quantity": 2, "discountType": "percentage", "discountValue": 15 },
+                { "quantity": 3, "discountType": "percentage", "discountValue": 20 }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "operations": [
+        {
+          "productDiscountsAdd": {
+            "candidates": [
+              {
+                "message": "Bundle discount",
+                "targets": [
+                  { "cartLine": { "id": "gid://shopify/CartLine/0" } },
+                  { "cartLine": { "id": "gid://shopify/CartLine/1" } }
+                ],
+                "value": { "percentage": { "value": 15.0 } }
+              }
+            ],
+            "selectionStrategy": "ALL"
+          }
+        }
+      ]
+    }
+  }
+}
