@@ -34,75 +34,58 @@
         "accessibility_info": "Featured products slideshow"
       }
     },
-    "featured_collection": {
-      "type": "featured-collection",
-      "settings": {
-        "title": "Shop the Collection",
-        "heading_size": "h1",
-        "description": "",
-        "show_description": false,
-        "description_style": "body",
-        "collection": "all",
-        "products_to_show": 8,
-        "columns_desktop": 4,
-        "color_scheme": "scheme-1",
-        "full_width": false,
-        "show_view_all": true,
-        "view_all_style": "solid",
-        "enable_desktop_slider": false,
-        "swipe_on_mobile": false,
-        "image_ratio": "square",
-        "image_shape": "default",
-        "show_secondary_image": true,
-        "show_vendor": false,
-        "show_rating": false,
-        "quick_add": "none",
-        "columns_mobile": "2",
-        "padding_top": 60,
-        "padding_bottom": 40
-      }
-    },
-    "bundle_picker": {
-      "type": "bundle-picker",
-      "settings": {
-        "heading": "Build your bundle",
-        "heading_size": "h1",
-        "show_metaobject_bundles": true,
-        "columns_desktop": "3",
-        "color_scheme": "scheme-2",
-        "padding_top": 60,
-        "padding_bottom": 60
-      },
+    "testimonials": {
+      "type": "testimonials",
       "blocks": {
-        "bundle_1": {
-          "type": "manual_bundle",
+        "review_1": {
+          "type": "review",
           "settings": {
-            "title": "Starter bundle",
-            "badge_text": "Save 15%",
-            "price": "$49.99",
-            "products": []
+            "rating": 5,
+            "quote": "Got the Charizard one and it goes so well literally with everything. Shipping was quick too!",
+            "author": "Gemma B."
+          }
+        },
+        "review_2": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "He ordered the Mewtwo one for me as a gift and I haven't stopped looking at it since. You smashed it!",
+            "author": "Emma H."
+          }
+        },
+        "review_3": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Pikachu just came in and I'm in love. Perfect honestly.",
+            "author": "James B."
+          }
+        },
+        "review_4": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Ordered the Blastoise one and it looks even better in person. So clean.",
+            "author": "Lisa N."
           }
         }
       },
-      "block_order": ["bundle_1"]
-    },
-    "testimonials": {
-      "type": "testimonials",
+      "block_order": ["review_1", "review_2", "review_3", "review_4"],
       "settings": {
-        "heading": "Customer reviews",
+        "heading": "Trustpilot reviews",
         "heading_size": "h1",
         "show_rating": true,
-        "rating_text": "4.8 out of 5 based on verified reviews",
-        "columns_desktop": "4",
-        "color_scheme": "scheme-2",
-        "padding_top": 60,
+        "rating_text": "Excellent 4.8 / 5",
+        "columns_desktop": "3",
+        "color_scheme": "scheme-1",
+        "padding_top": 16,
         "padding_bottom": 60
       }
     },
     "contact_form": {
       "type": "contact-form",
       "settings": {
-        "heading": "Get in touch",
+        "heading": "Contact form",
         "heading_size": "h1",
         "color_scheme": "scheme-1",
         "padding_top": 52,
@@ -112,8 +95,6 @@
   },
   "order": [
     "hero_slideshow",
-    "featured_collection",
-    "bundle_picker",
     "testimonials",
     "contact_form"
   ]

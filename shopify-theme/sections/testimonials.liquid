@@ -20,21 +20,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
-    margin-top: 0.8rem;
-    font-size: 1.6rem;
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+    font-size: 2.4rem;
+    font-weight: 800;
   }
 
   .testimonials-{{ section.id }} .testimonials__stars {
     display: inline-flex;
     gap: 0.2rem;
     color: #F58220;
+    line-height: 0;
   }
 
   .testimonials-{{ section.id }} .testimonials__stars svg {
-    width: 2rem;
-    height: 2rem;
+    width: 2.8rem;
+    height: 2.8rem;
     fill: #F58220;
+    color: #F58220;
   }
 
   .testimonials-{{ section.id }} .testimonials__grid {
@@ -81,6 +84,8 @@
   }
 {%- endstyle -%}
 
+{%- capture star_svg -%}<svg class="icon icon-star" viewBox="0 0 24 24" role="presentation" focusable="false"><path d="M12 2.5l2.7 6.6 7.1.5-5.4 4.6 1.7 6.9L12 17.9l-6.1 3.2 1.7-6.9L2.2 9.6l7.1-.5z"/></svg>{%- endcapture -%}
+
 <div class="color-{{ section.settings.color_scheme }} gradient testimonials-{{ section.id }}">
   <div class="page-width section-{{ section.id }}-padding">
     <div class="testimonials__header">
@@ -91,12 +96,12 @@
       {%- endif -%}
       {%- if section.settings.show_rating -%}
         <div class="testimonials__rating">
+          <span>{{ section.settings.rating_text }}</span>
           <span class="testimonials__stars">
             {%- for i in (1..5) -%}
-              {{- 'icon-star.svg' | inline_asset_content -}}
+              {{- star_svg -}}
             {%- endfor -%}
           </span>
-          <span>{{ section.settings.rating_text }}</span>
         </div>
       {%- endif -%}
     </div>
@@ -107,7 +112,7 @@
           <span class="testimonials__stars">
             {%- assign stars = block.settings.rating | default: 5 -%}
             {%- for i in (1..stars) -%}
-              {{- 'icon-star.svg' | inline_asset_content -}}
+              {{- star_svg -}}
             {%- endfor -%}
           </span>
           <p class="testimonials__quote">&ldquo;{{ block.settings.quote }}&rdquo;</p>

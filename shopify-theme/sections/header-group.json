@@ -6,10 +6,10 @@
       "type": "marquee-ticker",
       "settings": {
         "color_scheme": "scheme-5",
-        "speed": 28,
+        "speed": 40,
         "pause_on_hover": true,
-        "padding_mobile": 12,
-        "padding_desktop": 16
+        "padding_mobile": 9,
+        "padding_desktop": 9
       },
       "blocks": {
         "marquee-0": {
@@ -48,15 +48,15 @@
         "logo_position": "middle-center",
         "menu": "main-menu",
         "menu_type_desktop": "dropdown",
-        "sticky_header_type": "on-scroll-up",
+        "sticky_header_type": "always",
         "show_line_separator": true,
         "enable_country_selector": false,
         "enable_language_selector": false,
         "enable_customer_avatar": true,
         "mobile_logo_position": "center",
         "margin_bottom": 0,
-        "padding_top": 20,
-        "padding_bottom": 20
+        "padding_top": 12,
+        "padding_bottom": 12
       }
     }
   },

@@ -2,6 +2,57 @@
 {{ 'component-slider.css' | asset_url | stylesheet_tag }}
 {{ 'component-slideshow.css' | asset_url | stylesheet_tag }}
 
+{%- assign has_asset_image = false -%}
+{%- for block in section.blocks -%}
+  {%- if block.settings.asset_image != blank and block.settings.image == blank -%}
+    {%- assign has_asset_image = true -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if has_asset_image -%}
+  {%- style -%}
+    /* Full-length background: let the asset image define the slide height so the
+       whole image is visible (no cropping) instead of cover-cropping the sides. */
+    @media screen and (min-width: 750px) {
+      #Slider-{{ section.id }}.banner {
+        min-height: 0;
+      }
+      #Slider-{{ section.id }} .banner__media {
+        position: relative;
+        height: auto;
+      }
+      #Slider-{{ section.id }} .slideshow__asset-image {
+        position: relative;
+        height: auto;
+        width: 100%;
+        object-fit: contain;
+      }
+      #Slider-{{ section.id }} .banner__content {
+        position: absolute;
+        inset: 0;
+      }
+    }
+
+    /* White, rounded text box with black text. Wider and less tall. */
+    #Slider-{{ section.id }} .banner__box {
+      background: #ffffff;
+      background-image: none;
+      color: #111111;
+      border-radius: 16px;
+      max-width: 68rem;
+      width: 100%;
+      padding-top: 2.2rem;
+      padding-bottom: 2.4rem;
+      padding-left: 4.5rem;
+      padding-right: 4.5rem;
+    }
+    #Slider-{{ section.id }} .banner__box .banner__heading,
+    #Slider-{{ section.id }} .banner__box .banner__text,
+    #Slider-{{ section.id }} .banner__box .banner__text p {
+      color: #111111;
+    }
+  {%- endstyle -%}
+{%- endif -%}
+
 {%- if section.settings.slide_height == 'adapt_image' and section.blocks.first.settings.image != blank -%}
   {%- style -%}
     @media screen and (max-width: 749px) {

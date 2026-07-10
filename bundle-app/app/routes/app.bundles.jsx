@@ -9,13 +9,55 @@ import { authenticate } from "../shopify.server";
 // matter of appending here + handling its `value` in the three switch points
 // (buildIndexEntry, the form sections below, and the discount function).
 const BUNDLE_TYPES = [
-  { value: "fixed", label: "Fixed bundle" },
-  { value: "variant", label: "Variant bundle" },
-  { value: "multipack", label: "Multipack" },
-  { value: "mix_match", label: "Mix & match" },
-  { value: "infinite", label: "Infinite options" },
-  { value: "volume", label: "Volume discount" },
-  { value: "bogo", label: "BOGO (Buy X, get Y)" },
+  {
+    value: "fixed",
+    label: "Fixed bundle",
+    tagline: "A set of products always sold together",
+    description:
+      "Pick several products that are bundled and discounted as one offer.",
+  },
+  {
+    value: "variant",
+    label: "Variant bundle",
+    tagline: "Pick several variants of one product",
+    description:
+      "Let shoppers choose a number of variants (colors, sizes) of a single product.",
+  },
+  {
+    value: "multipack",
+    label: "Multipack",
+    tagline: "A fixed pack of one product",
+    description:
+      "Sell a pack of N units of one product/variant at a bundled pack price.",
+  },
+  {
+    value: "mix_match",
+    label: "Mix & match",
+    tagline: "Shoppers build their own set",
+    description:
+      "Shoppers pick a set number of items from a pool of eligible products.",
+  },
+  {
+    value: "infinite",
+    label: "Infinite options",
+    tagline: "Mix & match with no upper limit",
+    description:
+      "Like mix & match, but shoppers can add as many items as they like.",
+  },
+  {
+    value: "volume",
+    label: "Volume discount",
+    tagline: "Buy more, save more",
+    description:
+      "Quantity-break tiers on a single product — bigger discount at higher counts.",
+  },
+  {
+    value: "bogo",
+    label: "BOGO",
+    tagline: "Buy X, get Y",
+    description:
+      "Buy products from one set and get products from another free or discounted.",
+  },
 ];
 
 const DISCOUNT_TYPES = [
@@ -374,6 +416,26 @@ function typeLabel(value) {
   return BUNDLE_TYPES.find((t) => t.value === value)?.label || value;
 }
 
+// Same idea as formatDiscount, but reads straight from the in-progress form
+// state so the editor preview updates live as the merchant types.
+function formatFormDiscount(form) {
+  if (form.bundleType === "volume") {
+    const n = form.volumeTiers.length;
+    return `${n} volume tier${n === 1 ? "" : "s"}`;
+  }
+  if (form.bundleType === "bogo") {
+    const reward =
+      form.rewardDiscountType === "percentage"
+        ? `${form.rewardDiscountValue || 0}% off`
+        : `$${form.rewardDiscountValue || 0} off`;
+    return `Buy ${form.buyQuantity || 1}, get ${form.getQuantity || 1} (${reward})`;
+  }
+  if (form.discountType === "percentage") return `${form.discountValue || 0}% off`;
+  if (form.discountType === "fixed_amount") return `$${form.discountValue || 0} off`;
+  if (form.discountType === "fixed_price") return `Fixed $${form.discountValue || 0}`;
+  return "—";
+}
+
 export default function Bundles() {
   const { bundles } = useLoaderData();
   const fetcher = useFetcher();
@@ -381,6 +443,9 @@ export default function Bundles() {
 
   const [form, setForm] = useState(emptyForm);
   const [searchValue, setSearchValue] = useState("");
+  // Which screen of the flow is visible: the bundle list, the type gallery,
+  // or the editor (form + live preview).
+  const [view, setView] = useState("list");
 
   const isSaving =
     fetcher.state !== "idle" && fetcher.formData?.get("intent") === "save";
@@ -443,6 +508,25 @@ export default function Bundles() {
         (p) => ({ id: p.id, title: p.title }),
       ),
     });
+    setView("editor");
+  };
+
+  // "Add bundle" starts a fresh draft and shows the type gallery first.
+  const openAdd = () => {
+    resetForm();
+    setView("chooseType");
+  };
+
+  // Picking a type in the gallery keeps whatever the merchant already filled
+  // in (so "Change type" mid-edit doesn't wipe the draft) and opens the editor.
+  const chooseType = (type) => {
+    setForm((prev) => ({ ...prev, bundleType: type }));
+    setView("editor");
+  };
+
+  const cancelToList = () => {
+    resetForm();
+    setView("list");
   };
 
   const pickProducts = async () => {
@@ -528,8 +612,10 @@ export default function Bundles() {
       },
       { method: "POST" },
     );
+    const wasEditing = isEditing;
     resetForm();
-    shopify.toast.show(isEditing ? "Bundle updated" : "Bundle created");
+    setView("list");
+    shopify.toast.show(wasEditing ? "Bundle updated" : "Bundle created");
   };
 
   const deleteBundle = (id) => {
@@ -568,25 +654,182 @@ export default function Bundles() {
     bogo: "Choose “Buy” products",
   }[form.bundleType];
 
-  return (
-    <s-page heading="Bundles">
-      <s-section heading={isEditing ? `Edit "${form.title}"` : "Create a bundle"}>
-        <s-stack direction="block" gap="base">
-          <s-select
-            label="Bundle type"
-            name="bundleType"
-            value={form.bundleType}
-            onChange={setField("bundleType")}
-          >
-            {BUNDLE_TYPES.map((t) => (
-              <s-option key={t.value} value={t.value}>
-                {t.label}
-              </s-option>
-            ))}
-          </s-select>
+  // ---------------------------------------------------------------- LIST VIEW
+  if (view === "list") {
+    return (
+      <s-page heading="Bundles">
+        <s-button slot="primary-action" variant="primary" onClick={openAdd}>
+          Add bundle
+        </s-button>
+        <s-section heading="All bundles">
+          {bundles.length === 0 ? (
+            <s-grid gap="base" justifyItems="center" paddingBlock="large-400">
+              <s-stack direction="block" gap="small" alignItems="center">
+                <s-heading>No bundles yet</s-heading>
+                <s-paragraph color="subdued">
+                  Create your first bundle — choose from {BUNDLE_TYPES.length}{" "}
+                  bundle types.
+                </s-paragraph>
+              </s-stack>
+              <s-button variant="primary" onClick={openAdd}>
+                Add bundle
+              </s-button>
+            </s-grid>
+          ) : (
+            <s-stack direction="block" gap="base">
+              <s-search-field
+                label="Search bundles"
+                value={searchValue}
+                onInput={(e) => setSearchValue(e.target.value)}
+              ></s-search-field>
 
-          <s-text-field
-            label="Title"
+              {visibleBundles.length === 0 ? (
+                <s-paragraph>No bundles match.</s-paragraph>
+              ) : (
+                <s-table variant="auto">
+                  <s-table-header-row>
+                    <s-table-header listSlot="primary">Title</s-table-header>
+                    <s-table-header>Type</s-table-header>
+                    <s-table-header>Discount</s-table-header>
+                    <s-table-header>Status</s-table-header>
+                    <s-table-header>Products</s-table-header>
+                    <s-table-header></s-table-header>
+                  </s-table-header-row>
+                  <s-table-body>
+                    {visibleBundles.map((bundle) => (
+                      <s-table-row key={bundle.id}>
+                        <s-table-cell>{bundle.title?.value}</s-table-cell>
+                        <s-table-cell>
+                          {typeLabel(bundle.bundleType?.value)}
+                        </s-table-cell>
+                        <s-table-cell>{formatDiscount(bundle)}</s-table-cell>
+                        <s-table-cell>
+                          <s-badge
+                            tone={
+                              bundle.status?.value === "active"
+                                ? "success"
+                                : "neutral"
+                            }
+                          >
+                            {bundle.status?.value === "active"
+                              ? "Active"
+                              : "Draft"}
+                          </s-badge>
+                        </s-table-cell>
+                        <s-table-cell>
+                          {(bundle.products?.references?.nodes || [])
+                            .map((p) => p.title)
+                            .join(", ")}
+                        </s-table-cell>
+                        <s-table-cell>
+                          <s-stack direction="inline" gap="small-300">
+                            <s-button
+                              variant="tertiary"
+                              onClick={() => startEdit(bundle)}
+                            >
+                              Edit
+                            </s-button>
+                            <s-button
+                              variant="tertiary"
+                              onClick={() => toggleStatus(bundle)}
+                            >
+                              {bundle.status?.value === "active"
+                                ? "Set draft"
+                                : "Set active"}
+                            </s-button>
+                            <s-button
+                              variant="tertiary"
+                              tone="critical"
+                              onClick={() => deleteBundle(bundle.id)}
+                            >
+                              Delete
+                            </s-button>
+                          </s-stack>
+                        </s-table-cell>
+                      </s-table-row>
+                    ))}
+                  </s-table-body>
+                </s-table>
+              )}
+            </s-stack>
+          )}
+        </s-section>
+      </s-page>
+    );
+  }
+
+  // --------------------------------------------------------- CHOOSE-TYPE VIEW
+  if (view === "chooseType") {
+    return (
+      <s-page heading="Choose a bundle type">
+        <s-button slot="secondary-actions" onClick={cancelToList}>
+          Cancel
+        </s-button>
+        <s-section heading="What kind of bundle do you want to create?">
+          <s-grid gridTemplateColumns="repeat(6, 1fr)" gap="base">
+            {BUNDLE_TYPES.map((t) => (
+              <s-grid-item key={t.value} gridColumn="span 2">
+                <s-clickable
+                  border="base"
+                  borderRadius="base"
+                  padding="base"
+                  inlineSize="100%"
+                  onClick={() => chooseType(t.value)}
+                  accessibilityLabel={`Create a ${t.label}`}
+                >
+                  <s-stack direction="block" gap="small">
+                    <s-heading>{t.label}</s-heading>
+                    <s-text type="strong" color="subdued">
+                      {t.tagline}
+                    </s-text>
+                    <s-paragraph color="subdued">{t.description}</s-paragraph>
+                  </s-stack>
+                </s-clickable>
+              </s-grid-item>
+            ))}
+          </s-grid>
+        </s-section>
+      </s-page>
+    );
+  }
+
+  // -------------------------------------------------------------- EDITOR VIEW
+  const activeType = BUNDLE_TYPES.find((t) => t.value === form.bundleType);
+  return (
+    <s-page
+      heading={isEditing ? "Edit bundle" : `New ${activeType?.label || "bundle"}`}
+    >
+      <s-button
+        slot="primary-action"
+        variant="primary"
+        onClick={saveBundle}
+        {...(isSaving ? { loading: true } : {})}
+        {...(!canSave ? { disabled: true } : {})}
+      >
+        {isEditing ? "Save changes" : "Save bundle"}
+      </s-button>
+      <s-button slot="secondary-actions" onClick={cancelToList}>
+        Cancel
+      </s-button>
+
+      <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="base">
+        <s-grid-item gridColumn="span 7">
+          <s-section heading="Details">
+            <s-stack direction="block" gap="base">
+              <s-stack direction="inline" gap="base" alignItems="center">
+                <s-badge tone="info">{activeType?.label}</s-badge>
+                {!isEditing ? (
+                  <s-button
+                    variant="tertiary"
+                    onClick={() => setView("chooseType")}
+                  >
+                    Change type
+                  </s-button>
+                ) : null}
+              </s-stack>
+
+              <s-text-field
+                label="Title"
             name="title"
             value={form.title}
             onInput={setField("title")}
@@ -805,100 +1048,81 @@ export default function Bundles() {
             ></s-switch>
           </s-stack>
 
-          <s-stack direction="inline" gap="base">
-            <s-button
-              variant="primary"
-              onClick={saveBundle}
-              {...(isSaving ? { loading: true } : {})}
-              {...(!canSave ? { disabled: true } : {})}
+        </s-stack>
+          </s-section>
+        </s-grid-item>
+
+        <s-grid-item gridColumn="span 5">
+          <s-section heading="Preview">
+            <s-box
+              border="base"
+              borderRadius="base"
+              padding="base"
+              background="subdued"
             >
-              {isEditing ? "Save changes" : "Save bundle"}
-            </s-button>
-            {isEditing ? (
-              <s-button onClick={resetForm}>Cancel edit</s-button>
-            ) : null}
-          </s-stack>
-        </s-stack>
-      </s-section>
+              <s-stack direction="block" gap="base">
+                {form.badgeText ? (
+                  <s-badge tone="success">{form.badgeText}</s-badge>
+                ) : null}
+                <s-heading>{form.title || "Untitled bundle"}</s-heading>
+                <s-badge tone="info">{typeLabel(form.bundleType)}</s-badge>
+                {form.description ? (
+                  <s-paragraph color="subdued">{form.description}</s-paragraph>
+                ) : null}
 
-      <s-section heading="Existing bundles">
-        <s-stack direction="block" gap="base">
-          <s-search-field
-            label="Search bundles"
-            value={searchValue}
-            onInput={(e) => setSearchValue(e.target.value)}
-          ></s-search-field>
+                <s-divider></s-divider>
 
-          {visibleBundles.length === 0 ? (
-            <s-paragraph>No bundles match.</s-paragraph>
-          ) : (
-            <s-table variant="auto">
-              <s-table-header-row>
-                <s-table-header listSlot="primary">Title</s-table-header>
-                <s-table-header>Type</s-table-header>
-                <s-table-header>Discount</s-table-header>
-                <s-table-header>Status</s-table-header>
-                <s-table-header>Products</s-table-header>
-                <s-table-header></s-table-header>
-              </s-table-header-row>
-              <s-table-body>
-                {visibleBundles.map((bundle) => (
-                  <s-table-row key={bundle.id}>
-                    <s-table-cell>{bundle.title?.value}</s-table-cell>
-                    <s-table-cell>
-                      {typeLabel(bundle.bundleType?.value)}
-                    </s-table-cell>
-                    <s-table-cell>{formatDiscount(bundle)}</s-table-cell>
-                    <s-table-cell>
-                      <s-badge
-                        tone={
-                          bundle.status?.value === "active"
-                            ? "success"
-                            : "neutral"
-                        }
-                      >
-                        {bundle.status?.value === "active"
-                          ? "Active"
-                          : "Draft"}
-                      </s-badge>
-                    </s-table-cell>
-                    <s-table-cell>
-                      {(bundle.products?.references?.nodes || [])
-                        .map((p) => p.title)
-                        .join(", ")}
-                    </s-table-cell>
-                    <s-table-cell>
-                      <s-stack direction="inline" gap="tight">
-                        <s-button
-                          variant="tertiary"
-                          onClick={() => startEdit(bundle)}
-                        >
-                          Edit
-                        </s-button>
-                        <s-button
-                          variant="tertiary"
-                          onClick={() => toggleStatus(bundle)}
-                        >
-                          {bundle.status?.value === "active"
-                            ? "Set draft"
-                            : "Set active"}
-                        </s-button>
-                        <s-button
-                          variant="tertiary"
-                          tone="critical"
-                          onClick={() => deleteBundle(bundle.id)}
-                        >
-                          Delete
-                        </s-button>
-                      </s-stack>
-                    </s-table-cell>
-                  </s-table-row>
-                ))}
-              </s-table-body>
-            </s-table>
-          )}
-        </s-stack>
-      </s-section>
+                <s-text type="strong">
+                  {form.bundleType === "bogo" ? "Buy products" : "Includes"}
+                </s-text>
+                {form.selectedProducts.length > 0 ? (
+                  <s-unordered-list>
+                    {form.selectedProducts.map((p) => (
+                      <s-list-item key={p.id}>{p.title}</s-list-item>
+                    ))}
+                  </s-unordered-list>
+                ) : (
+                  <s-paragraph color="subdued">
+                    No products selected yet
+                  </s-paragraph>
+                )}
+
+                {form.bundleType === "bogo" ? (
+                  <>
+                    <s-text type="strong">Get products</s-text>
+                    {form.rewardProducts.length > 0 ? (
+                      <s-unordered-list>
+                        {form.rewardProducts.map((p) => (
+                          <s-list-item key={p.id}>{p.title}</s-list-item>
+                        ))}
+                      </s-unordered-list>
+                    ) : (
+                      <s-paragraph color="subdued">
+                        No reward products yet
+                      </s-paragraph>
+                    )}
+                  </>
+                ) : null}
+
+                <s-divider></s-divider>
+
+                <s-stack direction="inline" gap="base" alignItems="center">
+                  <s-text>Offer</s-text>
+                  <s-text type="strong">{formatFormDiscount(form)}</s-text>
+                </s-stack>
+                <s-stack direction="inline" gap="base" alignItems="center">
+                  <s-text color="subdued">Status</s-text>
+                  <s-badge
+                    tone={form.status === "active" ? "success" : "neutral"}
+                  >
+                    {form.status === "active" ? "Active" : "Draft"}
+                  </s-badge>
+                </s-stack>
+              </s-stack>
+            </s-box>
+          </s-section>
+        </s-grid-item>
+      </s-grid>
     </s-page>
   );
 }

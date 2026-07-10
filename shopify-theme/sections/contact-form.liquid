@@ -12,6 +12,83 @@
       padding-bottom: {{ section.settings.padding_bottom }}px;
     }
   }
+
+  /* Contact form: centered heading, rounded inputs, full-width Send button. */
+  .contact .title,
+  .section-{{ section.id }}-padding .title {
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 3.6rem;
+  }
+
+  #ContactForm .field,
+  #ContactForm .field:before,
+  #ContactForm .field:after,
+  #ContactForm .field__input,
+  #ContactForm .text-area {
+    border-radius: 12px !important;
+  }
+
+  #ContactForm .contact__button {
+    text-align: center;
+  }
+
+  #ContactForm .contact__button .button {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    min-width: 100%;
+    border: 2px solid #f58220;
+    border-radius: 12px;
+    background-color: #f58220;
+    color: #ffffff;
+    z-index: 0;
+    transition: color 0.45s ease;
+  }
+
+  /* White wipes in from both sides on hover; text + border become the base color.
+     Reset Dawn's .button:after insets so BOTH sides animate. */
+  #ContactForm .contact__button .button::before,
+  #ContactForm .contact__button .button::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    height: auto;
+    background-color: #ffffff;
+    background-image: none;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    z-index: -1;
+    transition: width 0.45s ease;
+  }
+
+  #ContactForm .contact__button .button::before {
+    left: 0;
+    right: auto;
+  }
+
+  #ContactForm .contact__button .button::after {
+    right: 0;
+    left: auto;
+  }
+
+  #ContactForm .contact__button .button:hover::before,
+  #ContactForm .contact__button .button:hover::after,
+  #ContactForm .contact__button .button:focus-visible::before,
+  #ContactForm .contact__button .button:focus-visible::after {
+    width: 50%;
+  }
+
+  #ContactForm .contact__button .button:hover,
+  #ContactForm .contact__button .button:focus-visible {
+    color: #f58220;
+  }
 {%- endstyle -%}
 
 <div class="color-{{ section.settings.color_scheme }} gradient">

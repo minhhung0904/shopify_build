@@ -22,17 +22,24 @@
 
   .marquee-{{ section.id }} .marquee__item {
     flex: 0 0 auto;
-    padding: 0 3rem;
-    font-size: 1.3rem;
+    padding: 0 2.4rem;
+    margin: 0;
+    font-size: 1.15rem;
+    line-height: 1.2;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
+    color: #ffffff;
+  }
+
+  .marquee-{{ section.id }} a.marquee__item {
+    color: #ffffff;
   }
 
   @media screen and (min-width: 750px) {
     .marquee-{{ section.id }} .marquee__item {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
     }
   }
 
@@ -53,14 +60,21 @@
 {%- endstyle -%}
 
 <div class="marquee-{{ section.id }} color-{{ section.settings.color_scheme }} gradient">
+  {%- comment -%}
+    Two identical halves (translateX(-50%) loops seamlessly). Each half repeats
+    the messages enough times to always exceed the viewport width, so the strip
+    scrolls continuously with no blank gap even with a few short messages.
+  {%- endcomment -%}
   <div class="marquee__track" aria-hidden="false">
-    {%- for i in (1..2) -%}
-      {%- for block in section.blocks -%}
-        {%- if block.settings.link != blank -%}
-          <a href="{{ block.settings.link }}" class="marquee__item link" {{ block.shopify_attributes }}>{{ block.settings.text }}</a>
-        {%- else -%}
-          <p class="marquee__item" {{ block.shopify_attributes }}>{{ block.settings.text }}</p>
-        {%- endif -%}
+    {%- for half in (1..2) -%}
+      {%- for repeat in (1..4) -%}
+        {%- for block in section.blocks -%}
+          {%- if block.settings.link != blank -%}
+            <a href="{{ block.settings.link }}" class="marquee__item link" {{ block.shopify_attributes }}>{{ block.settings.text }}</a>
+          {%- else -%}
+            <p class="marquee__item" {{ block.shopify_attributes }}>{{ block.settings.text }}</p>
+          {%- endif -%}
+        {%- endfor -%}
       {%- endfor -%}
     {%- endfor -%}
   </div>

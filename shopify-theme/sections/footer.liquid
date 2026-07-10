@@ -166,6 +166,145 @@
           {% endif %}
         >
           {%- if section.settings.newsletter_enable -%}
+            <style>
+              /* Center the whole subscribe block. */
+              .footer-block--newsletter {
+                justify-content: center;
+                text-align: center;
+              }
+
+              .footer-block__newsletter {
+                width: 100%;
+                max-width: 60rem;
+                margin: 0 auto;
+                text-align: center;
+              }
+
+              .footer-block__newsletter .footer-block__heading {
+                text-align: center;
+              }
+
+              /* Make the form fill the same centered column as the heading. */
+              .footer-block__newsletter .newsletter-form {
+                max-width: 100%;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto;
+                text-align: center;
+              }
+
+              .footer-block__newsletter .newsletter-form__field-wrapper {
+                width: 100%;
+                margin: 0 auto;
+              }
+
+              .footer-block__newsletter .field,
+              .footer-block__newsletter .field:before,
+              .footer-block__newsletter .field:after,
+              .footer-block__newsletter .field__input {
+                border-radius: 12px !important;
+              }
+
+              .footer-block__newsletter .field:before {
+                background: transparent;
+              }
+
+              /* Clean 2px white border on the email field. */
+              .footer-block__newsletter .field:after {
+                border: 2px solid #ffffff;
+                box-shadow: none;
+              }
+
+              /* Heading + subtext polish. */
+              .footer-block__newsletter .footer-block__heading {
+                font-size: 2.2rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                margin-bottom: 1.6rem;
+              }
+
+              .footer-block__newsletter .newsletter-form__field-wrapper {
+                width: 100%;
+              }
+
+              /* Taller, airier email input. */
+              .footer-block__newsletter .field {
+                min-height: 5.4rem;
+              }
+
+              .footer-block__newsletter .field__input {
+                height: 5.4rem;
+                padding: 0 1.8rem;
+                font-size: 1.6rem;
+                color: #ffffff;
+                background: transparent;
+              }
+
+              .footer-block__newsletter .field__input::placeholder {
+                color: rgba(255, 255, 255, 0.85);
+              }
+
+              .footer-block__newsletter .field__label {
+                color: #ffffff;
+              }
+
+              .footer-block__newsletter .newsletter-signup-btn {
+                position: relative;
+                overflow: hidden;
+                display: block;
+                width: 100%;
+                height: auto;
+                top: auto;
+                right: auto;
+                margin-top: 1.2rem;
+                padding: 1.9rem 2rem;
+                border: 2px solid #ffffff;
+                border-radius: 12px;
+                background-color: #ffffff !important;
+                color: #f58220 !important;
+                font-weight: 700;
+                font-size: 1.8rem;
+                cursor: pointer;
+                z-index: 0;
+                transition: color 0.45s ease;
+              }
+
+              .footer-block__newsletter .newsletter-signup-btn::before,
+              .footer-block__newsletter .newsletter-signup-btn::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 0;
+                background-color: #f58220;
+                border: none;
+                box-shadow: none;
+                z-index: -1;
+                transition: width 0.45s ease;
+              }
+
+              .footer-block__newsletter .newsletter-signup-btn::before {
+                left: 0;
+                right: auto;
+              }
+
+              .footer-block__newsletter .newsletter-signup-btn::after {
+                right: 0;
+                left: auto;
+              }
+
+              .footer-block__newsletter .newsletter-signup-btn:hover::before,
+              .footer-block__newsletter .newsletter-signup-btn:hover::after,
+              .footer-block__newsletter .newsletter-signup-btn:focus-visible::before,
+              .footer-block__newsletter .newsletter-signup-btn:focus-visible::after {
+                width: 50%;
+              }
+
+              .footer-block__newsletter .newsletter-signup-btn:hover,
+              .footer-block__newsletter .newsletter-signup-btn:focus-visible {
+                color: #ffffff !important;
+              }
+            </style>
             <div class="footer-block__newsletter">
               {%- if section.settings.newsletter_heading != blank -%}
                 <h2 class="footer-block__heading inline-richtext">{{ section.settings.newsletter_heading }}</h2>
@@ -197,18 +336,16 @@
                     <label class="field__label" for="NewsletterForm--{{ section.id }}">
                       {{ 'newsletter.label' | t }}
                     </label>
-                    <button
-                      type="submit"
-                      class="newsletter-form__button field__button"
-                      name="commit"
-                      id="Subscribe"
-                      aria-label="{{ 'newsletter.button_label' | t }}"
-                    >
-                      <span class="svg-wrapper">
-                        {{- 'icon-arrow.svg' | inline_asset_content -}}
-                      </span>
-                    </button>
                   </div>
+                  <button
+                    type="submit"
+                    class="newsletter-form__button newsletter-signup-btn"
+                    name="commit"
+                    id="Subscribe"
+                    aria-label="{{ 'newsletter.button_label' | t }}"
+                  >
+                    Sign up
+                  </button>
                   {%- if form.errors -%}
                     <small class="newsletter-form__message form__message" id="ContactFooter-error">
                       <span class="svg-wrapper">

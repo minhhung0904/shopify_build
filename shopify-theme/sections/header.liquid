@@ -74,6 +74,58 @@
       padding-top: 0.5rem;
     }
   }
+
+  /* Every menu item gets the same pill-sized box so the active state never
+     shifts the text and all items stay on one straight line. No underline. */
+  .header__menu-item {
+    color: #111111 !important;
+  }
+
+  .header__menu-item span {
+    display: inline-block;
+    padding: 0.4rem 1.1rem;
+    border-radius: 8px;
+    line-height: 1.4;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #111111;
+    text-decoration: none !important;
+  }
+
+  /* Bigger header action icons (search / account / cart). Fixed size so the
+     cart count badge on top never changes the icon dimensions. */
+  /* All three actions (search / account / cart) exactly the same size. */
+  .header__icons .header__icon .svg-wrapper svg,
+  .header__icons .header__icon svg,
+  .header__icons .icon {
+    width: 2.6rem !important;
+    height: 2.6rem !important;
+  }
+
+  .header__icons .header__icon {
+    padding: 0.4rem;
+    color: #111111;
+  }
+
+  .header__icons .header__icon--account span {
+    font-size: 1.5rem;
+  }
+
+  .header__menu-item:hover span {
+    text-decoration: none !important;
+    color: #111111;
+  }
+
+  /* Active / current item = solid orange pill, white text, no underline. */
+  .header__active-menu-item {
+    background: #f58220;
+    color: #ffffff !important;
+    text-decoration: none !important;
+  }
+
+  .header__menu-item:hover .header__active-menu-item {
+    color: #ffffff !important;
+  }
 </style>
 
 {%- style -%}
@@ -172,7 +224,13 @@
             }}
           </div>
         {%- else -%}
-          <span class="h2">{{ shop.name }}</span>
+          <img
+            src="{{ 'logo-poke-style.png' | asset_url }}"
+            alt="{{ shop.name | escape }}"
+            class="header__heading-logo"
+            style="width: auto; height: auto; max-height: 60px;"
+            loading="eager"
+          >
         {%- endif -%}
       </a>
       {%- if request.page_type == 'index' -%}
@@ -215,7 +273,13 @@
             }}
           </div>
         {%- else -%}
-          <span class="h2">{{ shop.name }}</span>
+          <img
+            src="{{ 'logo-poke-style.png' | asset_url }}"
+            alt="{{ shop.name | escape }}"
+            class="header__heading-logo"
+            style="width: auto; height: auto; max-height: 60px;"
+            loading="eager"
+          >
         {%- endif -%}
       </a>
       {%- if request.page_type == 'index' -%}

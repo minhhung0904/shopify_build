@@ -15,7 +15,130 @@
   .drawer {
     visibility: hidden;
   }
+
+  /* Reserved countdown bar */
+  .cart-reserved-bar {
+    background: #000000;
+    color: #ffffff;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 1rem 1.5rem;
+    font-size: 1.4rem;
+  }
+
+  .cart-reserved-bar__time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Per-line sale price + you save */
+  #CartDrawer .cart-item__old-price {
+    color: rgba(var(--color-foreground), 0.55);
+    text-decoration: line-through;
+  }
+
+  #CartDrawer .cart-item__final-price {
+    color: #f58220;
+  }
+
+  #CartDrawer .cart-item__save {
+    margin-top: 0.4rem;
+    font-weight: 700;
+    color: #111111;
+    font-size: 1.2rem;
+  }
+
+  /* Footer: savings + subtotal rows */
+  #CartDrawer .cart-savings-row,
+  #CartDrawer .cart-subtotal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+  }
+
+  #CartDrawer .cart-savings-row {
+    color: #f58220;
+    font-weight: 700;
+    font-size: 1.6rem;
+  }
+
+  #CartDrawer .cart-subtotal-row {
+    font-weight: 800;
+    font-size: 1.9rem;
+    margin-bottom: 1.2rem;
+  }
+
+  #CartDrawer .cart-subtotal-row__label,
+  #CartDrawer .cart-subtotal-row__value {
+    font-weight: 800;
+  }
+
+  /* Checkout button uses the primary color */
+  #CartDrawer .cart__checkout-button.button {
+    background: #f58220;
+    color: #ffffff;
+    border-radius: 10px;
+  }
+
+  /* Payment icons */
+  .cart-drawer__payment {
+    margin-top: 1.4rem;
+  }
+
+  .cart-drawer__payment .list-payment {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .cart-drawer__payment .list-payment__item {
+    list-style: none;
+    line-height: 0;
+  }
+
+  .cart-drawer__payment .list-payment__item svg {
+    width: 3.8rem;
+    height: 2.4rem;
+  }
 </style>
+
+<script>
+  (function () {
+    if (window.__cartReservedTimerInit) return;
+    window.__cartReservedTimerInit = true;
+
+    var DURATION = 5 * 60 * 1000; // 5 minutes
+    var KEY = 'cartReservedDeadline';
+
+    function getDeadline() {
+      var stored = parseInt(localStorage.getItem(KEY), 10);
+      var now = Date.now();
+      if (!stored || isNaN(stored) || stored <= now) {
+        stored = now + DURATION;
+        localStorage.setItem(KEY, String(stored));
+      }
+      return stored;
+    }
+
+    function tick() {
+      var el = document.getElementById('CartReservedTimer');
+      if (!el) return;
+      var remaining = getDeadline() - Date.now();
+      if (remaining < 0) remaining = 0;
+      var totalSec = Math.floor(remaining / 1000);
+      var m = Math.floor(totalSec / 60);
+      var s = totalSec % 60;
+      el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
 
 <cart-drawer class="drawer{% if cart == empty %} is-empty{% endif %}">
   <div id="CartDrawer" class="cart-drawer">
@@ -62,7 +185,7 @@
         </div>
       {%- endif -%}
       <div class="drawer__header">
-        <h2 class="drawer__heading">{{ 'sections.cart.title' | t }}</h2>
+        <h2 class="drawer__heading">Cart &bull; {{ cart.item_count }} item{% if cart.item_count != 1 %}s{% endif %}</h2>
         <button
           class="drawer__close"
           type="button"
@@ -74,6 +197,11 @@
           </span>
         </button>
       </div>
+      {%- unless cart == empty -%}
+        <div class="cart-reserved-bar" id="CartReservedBar">
+          Cart reserved for <span class="cart-reserved-bar__time" id="CartReservedTimer">05:00</span>
+        </div>
+      {%- endunless -%}
       <cart-drawer-items
         view-event-payload="{{ cart | standard_event_data: 'view', context: 'dialog' | escape }}"
         view-event-trigger="manual"
@@ -163,13 +291,27 @@
                             -%}
                           </div>
 
-                          {%- if item.original_price != item.final_price -%}
+                          {%- liquid
+                            assign has_line_discount = false
+                            if item.original_price != item.final_price
+                              assign has_line_discount = true
+                            endif
+                            assign has_compare = false
+                            if item.variant.compare_at_price and item.variant.compare_at_price > item.final_price
+                              assign has_compare = true
+                            endif
+                          -%}
+                          {%- if has_line_discount or has_compare -%}
                             <div class="cart-item__discounted-prices">
                               <span class="visually-hidden">
                                 {{ 'products.product.price.regular_price' | t }}
                               </span>
                               <s class="cart-item__old-price product-option">
-                                {{- item.original_price | money -}}
+                                {%- if has_compare -%}
+                                  {{- item.variant.compare_at_price | money -}}
+                                {%- else -%}
+                                  {{- item.original_price | money -}}
+                                {%- endif -%}
                               </s>
                               <span class="visually-hidden">
                                 {{ 'products.product.price.sale_price' | t }}
@@ -178,6 +320,12 @@
                                 {{ item.final_price | money }}
                               </strong>
                             </div>
+                            {%- if has_compare -%}
+                              {%- assign line_save = item.variant.compare_at_price | minus: item.final_price | times: item.quantity -%}
+                            {%- else -%}
+                              {%- assign line_save = item.original_price | minus: item.final_price | times: item.quantity -%}
+                            {%- endif -%}
+                            <div class="cart-item__save">(You save {{ line_save | money }})</div>
                           {%- else -%}
                             <div class="product-option">
                               {{ item.original_price | money }}
@@ -526,9 +674,28 @@
             {%- endif -%}
           </div>
 
-          <div class="totals" role="status">
-            <h2 class="totals__total">{{ 'sections.cart.estimated_total' | t }}</h2>
-            <p class="totals__total-value">{{ cart.total_price | money_with_currency }}</p>
+          {%- liquid
+            assign total_savings = 0
+            for item in cart.items
+              if item.variant.compare_at_price and item.variant.compare_at_price > item.final_price
+                assign line_s = item.variant.compare_at_price | minus: item.final_price | times: item.quantity
+                assign total_savings = total_savings | plus: line_s
+              elsif item.original_price > item.final_price
+                assign line_s = item.original_price | minus: item.final_price | times: item.quantity
+                assign total_savings = total_savings | plus: line_s
+              endif
+            endfor
+          -%}
+          {%- if total_savings > 0 -%}
+            <div class="cart-savings-row">
+              <span class="cart-savings-row__label">Savings</span>
+              <span class="cart-savings-row__value">-{{ total_savings | money }}</span>
+            </div>
+          {%- endif -%}
+
+          <div class="totals cart-subtotal-row" role="status">
+            <span class="cart-subtotal-row__label">Subtotal</span>
+            <span class="cart-subtotal-row__value">{{ cart.total_price | money }}</span>
           </div>
 
           <small class="tax-note caption-large rte">
@@ -588,6 +755,18 @@
             {{ 'sections.cart.checkout' | t }}
           </button>
         </div>
+
+        {%- if shop.enabled_payment_types.size > 0 -%}
+          <div class="cart-drawer__payment">
+            <ul class="list list-payment" role="list">
+              {%- for type in shop.enabled_payment_types -%}
+                <li class="list-payment__item">
+                  {{ type | payment_type_svg_tag: class: 'icon icon--full-color' }}
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
       </div>
     </div>
   </div>
