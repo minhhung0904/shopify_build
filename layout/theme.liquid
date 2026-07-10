@@ -19,6 +19,18 @@
   <link rel="canonical" href="{{ canonical_url }}">
   <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
 
+  {%- if settings.font_import_url != blank %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{{ settings.font_import_url }}">
+  {%- endif %}
+
+  <style>
+    :root {
+      --vcn-font-primary: {{ settings.font_family }};
+    }
+  </style>
+
   {{ content_for_header }}
 
   {{ 'vcn-base.css' | asset_url | stylesheet_tag }}

@@ -3,7 +3,9 @@
   "presets": {
     "Default": {
       "color_background": "#0a0a0f",
-      "color_accent": "#8B5CF6"
+      "color_accent": "#8B5CF6",
+      "font_family": "'Futura', 'Futura PT', 'Century Gothic', 'Trebuchet MS', Arial, sans-serif",
+      "font_import_url": ""
     }
   }
 }

@@ -23,5 +23,27 @@
         "default": "#8B5CF6"
       }
     ]
+  },
+  {
+    "name": "Typography",
+    "settings": [
+      {
+        "type": "paragraph",
+        "content": "Toàn bộ theme dùng chung 1 font, khai báo qua CSS variable --vcn-font-primary. Đổi 2 setting bên dưới là đổi font cho cả site, không cần sửa code."
+      },
+      {
+        "type": "text",
+        "id": "font_family",
+        "label": "Font family (CSS font-family stack)",
+        "default": "'Futura', 'Futura PT', 'Century Gothic', 'Trebuchet MS', Arial, sans-serif",
+        "info": "Danh sách font CSS, cách nhau bởi dấu phẩy. Futura là font thương mại nên chỉ hiển thị đúng trên máy đã cài sẵn; các font fallback (Century Gothic, Trebuchet MS) trông tương tự để máy khác vẫn đẹp."
+      },
+      {
+        "type": "text",
+        "id": "font_import_url",
+        "label": "Web font stylesheet URL (tùy chọn)",
+        "info": "Dán link CSS của Google Fonts/webfont nếu muốn tải font qua web (vd một font geometric sans thay thế Futura như Poppins/Montserrat). Để trống nếu chỉ dùng font cài sẵn trên máy."
+      }
+    ]
   }
 ]
