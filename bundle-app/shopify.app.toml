@@ -33,7 +33,6 @@ type = "file_reference"
 [metaobjects.app.bundle.fields.products]
 name = "Products"
 type = "list.product_reference"
-required = true
 
 [metaobjects.app.bundle.fields.price]
 name = "Bundle price"
@@ -42,6 +41,55 @@ type = "number_decimal"
 [metaobjects.app.bundle.fields.description]
 name = "Description"
 type = "multi_line_text_field"
+
+# --- Configuration fields (previously written by the app but undeclared) ---
+
+[metaobjects.app.bundle.fields.bundle_type]
+name = "Bundle type"
+type = "single_line_text_field"
+
+[metaobjects.app.bundle.fields.discount_type]
+name = "Discount type"
+type = "single_line_text_field"
+
+[metaobjects.app.bundle.fields.discount_value]
+name = "Discount value"
+type = "number_decimal"
+
+[metaobjects.app.bundle.fields.volume_tiers]
+name = "Volume tiers"
+type = "json"
+
+[metaobjects.app.bundle.fields.min_items]
+name = "Minimum items"
+type = "number_integer"
+
+[metaobjects.app.bundle.fields.max_items]
+name = "Maximum items"
+type = "number_integer"
+
+[metaobjects.app.bundle.fields.status]
+name = "Status"
+type = "single_line_text_field"
+
+[metaobjects.app.bundle.fields.sort_order]
+name = "Sort order"
+type = "number_integer"
+
+# --- Phase 1 additions ---
+
+# BOGO "get" set: the products the shopper receives at a reward discount.
+[metaobjects.app.bundle.fields.reward_products]
+name = "Reward products"
+type = "list.product_reference"
+
+# Type-specific settings that don't warrant their own top-level field.
+# BOGO: { buyQuantity, getQuantity, rewardDiscountType, rewardDiscountValue }
+# Multipack: { packSize }
+# Variant: { productId } (the single product whose variants are bundled)
+[metaobjects.app.bundle.fields.config]
+name = "Type config"
+type = "json"
 
 [webhooks]
 api_version = "2026-10"

@@ -262,12 +262,14 @@
               description: bundle.description.value,
               image: bundle.image.value,
               products: bundle.products.value,
+              reward_products: bundle.reward_products.value,
               bundle_type: bundle.bundle_type.value,
               discount_type: bundle.discount_type.value,
               discount_value: bundle.discount_value.value,
               volume_tiers: bundle.volume_tiers.value,
               min_items: bundle.min_items.value,
-              max_items: bundle.max_items.value
+              max_items: bundle.max_items.value,
+              config: bundle.config.value
             -%}
           {%- endif -%}
         {%- endfor -%}

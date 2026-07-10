@@ -1,7 +1,8 @@
 {%- comment -%}
   Renders one bundle card. Accepts:
   block_id, handle, title, badge_text, description, image, products,
-  bundle_type, discount_type, discount_value, volume_tiers, min_items, max_items
+  reward_products, bundle_type, discount_type, discount_value, volume_tiers,
+  min_items, max_items, config
 {%- endcomment -%}
 
 <li class="bp-card">
@@ -27,7 +28,12 @@
 
     {%- case bundle_type -%}
 
-      {%- when 'mix_match' -%}
+      {%- when 'mix_match', 'infinite' -%}
+        {%- if bundle_type == 'infinite' -%}
+          {%- assign effective_max = 9999 -%}
+        {%- else -%}
+          {%- assign effective_max = max_items | default: products.size -%}
+        {%- endif -%}
         <bundle-mix-match
           class="bp-card__form"
           data-bundle-handle="{{ handle }}"
@@ -35,13 +41,17 @@
           data-discount-type="{{ discount_type }}"
           data-discount-value="{{ discount_value }}"
           data-min-items="{{ min_items | default: 1 }}"
-          data-max-items="{{ max_items | default: products.size }}"
+          data-max-items="{{ effective_max }}"
           data-currency="{{ cart.currency.iso_code }}"
           data-cart-add-url="{{ routes.cart_add_url }}"
           data-cart-url="{{ routes.cart_url }}"
         >
           <p class="bp-card__counter" data-bundle-counter>
-            Pick {{ min_items | default: 1 }}–{{ max_items | default: products.size }} items
+            {%- if bundle_type == 'infinite' -%}
+              Pick {{ min_items | default: 1 }}+ items
+            {%- else -%}
+              Pick {{ min_items | default: 1 }}–{{ max_items | default: products.size }} items
+            {%- endif -%}
           </p>
           <ul class="bp-pool" role="list">
             {%- for product in products -%}
@@ -69,6 +79,147 @@
           </button>
           <p class="bp-card__error" data-bundle-error role="alert"></p>
         </bundle-mix-match>
+
+      {%- when 'variant' -%}
+        {%- assign product = products.first -%}
+        <bundle-mix-match
+          class="bp-card__form"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-discount-type="{{ discount_type }}"
+          data-discount-value="{{ discount_value }}"
+          data-min-items="{{ min_items | default: 1 }}"
+          data-max-items="{{ max_items | default: product.variants.size }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <p class="bp-card__counter" data-bundle-counter>
+            Pick {{ min_items | default: 1 }}–{{ max_items | default: product.variants.size }} variants
+          </p>
+          <ul class="bp-pool" role="list">
+            {%- for variant in product.variants -%}
+              <li>
+                <button
+                  type="button"
+                  class="bp-pool-item"
+                  data-variant-id="{{ variant.id }}"
+                  data-price="{{ variant.price }}"
+                  {% unless variant.available %}disabled{% endunless %}
+                >
+                  {%- if variant.featured_image != blank -%}
+                    {{ variant.featured_image | image_url: width: 300 | image_tag: loading: 'lazy' }}
+                  {%- elsif product.featured_image != blank -%}
+                    {{ product.featured_image | image_url: width: 300 | image_tag: loading: 'lazy' }}
+                  {%- endif -%}
+                  <span class="bp-pool-item__title">{{ variant.title }}</span>
+                  <span class="bp-pool-item__price">{{ variant.price | money }}</span>
+                </button>
+              </li>
+            {%- endfor -%}
+          </ul>
+          <p class="bp-card__price" data-bundle-price></p>
+          <button type="button" class="bp-card__submit" data-bundle-submit disabled>
+            Add bundle to cart
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-mix-match>
+
+      {%- when 'multipack' -%}
+        {%- assign product = products.first -%}
+        {%- assign variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+        {%- assign pack_size = config.packSize | default: 1 -%}
+        <bundle-multipack
+          class="bp-card__form"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-discount-type="{{ discount_type }}"
+          data-discount-value="{{ discount_value }}"
+          data-pack-size="{{ pack_size }}"
+          data-variant-id="{{ variant.id }}"
+          data-price="{{ variant.price }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <p class="bp-card__counter">Pack of {{ pack_size }}</p>
+          {%- if product.variants.size > 1 -%}
+            <select class="bp-card__variant-select" data-bundle-variant-select>
+              {%- for v in product.variants -%}
+                <option
+                  value="{{ v.id }}"
+                  data-price="{{ v.price }}"
+                  {% unless v.available %}disabled{% endunless %}
+                  {% if v == variant %}selected{% endif %}
+                >
+                  {{ v.title }} ({{ v.price | money }})
+                </option>
+              {%- endfor -%}
+            </select>
+          {%- endif -%}
+          <p class="bp-card__price" data-bundle-price></p>
+          <button
+            type="button"
+            class="bp-card__submit"
+            data-bundle-submit
+            {% unless product.available %}disabled{% endunless %}
+          >
+            {%- if product.available -%}
+              Add pack to cart
+            {%- else -%}
+              Sold out
+            {%- endif -%}
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-multipack>
+
+      {%- when 'bogo' -%}
+        {%- assign buy_qty = config.buyQuantity | default: 1 -%}
+        {%- assign get_qty = config.getQuantity | default: 1 -%}
+        <bundle-bogo
+          class="bp-card__form"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-buy-quantity="{{ buy_qty }}"
+          data-get-quantity="{{ get_qty }}"
+          data-reward-discount-type="{{ config.rewardDiscountType | default: 'percentage' }}"
+          data-reward-discount-value="{{ config.rewardDiscountValue | default: 0 }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <p class="bp-card__counter">Buy {{ buy_qty }}</p>
+          <select class="bp-card__variant-select" data-bogo-buy>
+            {%- for product in products -%}
+              {%- assign v = product.selected_or_first_available_variant | default: product.variants.first -%}
+              <option
+                value="{{ v.id }}"
+                data-price="{{ v.price }}"
+                {% unless product.available %}disabled{% endunless %}
+              >
+                {{ product.title }} ({{ v.price | money }})
+              </option>
+            {%- endfor -%}
+          </select>
+          <p class="bp-card__counter">Get {{ get_qty }}</p>
+          <select class="bp-card__variant-select" data-bogo-get>
+            {%- for product in reward_products -%}
+              {%- assign v = product.selected_or_first_available_variant | default: product.variants.first -%}
+              <option
+                value="{{ v.id }}"
+                data-price="{{ v.price }}"
+                {% unless product.available %}disabled{% endunless %}
+              >
+                {{ product.title }} ({{ v.price | money }})
+              </option>
+            {%- endfor -%}
+          </select>
+          <p class="bp-card__price" data-bundle-price></p>
+          <button type="button" class="bp-card__submit" data-bundle-submit>
+            Add to cart
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-bogo>
 
       {%- when 'volume' -%}
         {%- assign product = products.first -%}

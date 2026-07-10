@@ -3,10 +3,19 @@ import { useLoaderData, useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 
+// Single source of truth for the bundle types the app supports. Each entry
+// declares which form sections it needs so the UI, the index sync, and the
+// discount function all agree on the same set. Adding a future type is a
+// matter of appending here + handling its `value` in the three switch points
+// (buildIndexEntry, the form sections below, and the discount function).
 const BUNDLE_TYPES = [
   { value: "fixed", label: "Fixed bundle" },
+  { value: "variant", label: "Variant bundle" },
+  { value: "multipack", label: "Multipack" },
   { value: "mix_match", label: "Mix & match" },
+  { value: "infinite", label: "Infinite options" },
   { value: "volume", label: "Volume discount" },
+  { value: "bogo", label: "BOGO (Buy X, get Y)" },
 ];
 
 const DISCOUNT_TYPES = [
@@ -14,6 +23,19 @@ const DISCOUNT_TYPES = [
   { value: "fixed_amount", label: "Amount off" },
   { value: "fixed_price", label: "Fixed bundle price" },
 ];
+
+const REWARD_DISCOUNT_TYPES = [
+  { value: "percentage", label: "Percentage off" },
+  { value: "fixed_amount", label: "Amount off" },
+];
+
+// --- Per-type capability helpers (shared by the form + validation) ---
+const usesDiscount = (type) =>
+  ["fixed", "variant", "multipack", "mix_match", "infinite"].includes(type);
+const usesMinMax = (type) => ["mix_match", "variant"].includes(type);
+const usesMinOnly = (type) => type === "infinite";
+const usesSingleProduct = (type) =>
+  ["volume", "multipack", "variant"].includes(type);
 
 const emptyForm = {
   handle: "",
@@ -30,7 +52,45 @@ const emptyForm = {
   sortOrder: "0",
   selectedProducts: [],
   volumeTiers: [{ minQuantity: "2", discountType: "percentage", value: "10" }],
+  // multipack
+  packSize: "3",
+  // bogo
+  buyQuantity: "1",
+  getQuantity: "1",
+  rewardDiscountType: "percentage",
+  rewardDiscountValue: "100",
+  rewardProducts: [],
 };
+
+const BUNDLE_FIELDS = `#graphql
+  fragment BundleFields on Metaobject {
+    id
+    handle
+    title: field(key: "title") { value }
+    badgeText: field(key: "badge_text") { value }
+    price: field(key: "price") { value }
+    description: field(key: "description") { value }
+    bundleType: field(key: "bundle_type") { value }
+    discountType: field(key: "discount_type") { value }
+    discountValue: field(key: "discount_value") { value }
+    volumeTiers: field(key: "volume_tiers") { value }
+    minItems: field(key: "min_items") { value }
+    maxItems: field(key: "max_items") { value }
+    status: field(key: "status") { value }
+    sortOrder: field(key: "sort_order") { value }
+    config: field(key: "config") { value }
+    products: field(key: "products") {
+      references(first: 20) {
+        nodes { ... on Product { id title } }
+      }
+    }
+    rewardProducts: field(key: "reward_products") {
+      references(first: 20) {
+        nodes { ... on Product { id title } }
+      }
+    }
+  }
+`;
 
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
@@ -39,34 +99,10 @@ export const loader = async ({ request }) => {
     `#graphql
       query ListBundles {
         metaobjects(type: "$app:bundle", first: 50, sortKey: "updated_at", reverse: true) {
-          nodes {
-            id
-            handle
-            title: field(key: "title") { value }
-            badgeText: field(key: "badge_text") { value }
-            price: field(key: "price") { value }
-            description: field(key: "description") { value }
-            bundleType: field(key: "bundle_type") { value }
-            discountType: field(key: "discount_type") { value }
-            discountValue: field(key: "discount_value") { value }
-            volumeTiers: field(key: "volume_tiers") { value }
-            minItems: field(key: "min_items") { value }
-            maxItems: field(key: "max_items") { value }
-            status: field(key: "status") { value }
-            sortOrder: field(key: "sort_order") { value }
-            products: field(key: "products") {
-              references(first: 20) {
-                nodes {
-                  ... on Product {
-                    id
-                    title
-                  }
-                }
-              }
-            }
-          }
+          nodes { ...BundleFields }
         }
-      }`,
+      }
+      ${BUNDLE_FIELDS}`,
   );
   const json = await response.json();
   const bundles = json.data.metaobjects.nodes.slice().sort((a, b) => {
@@ -78,6 +114,67 @@ export const loader = async ({ request }) => {
   return { bundles };
 };
 
+// Reduces one metaobject node down to the minimal, storefront-tamper-proof
+// config the discount function needs. Mirrors the type list in BUNDLE_TYPES.
+function buildIndexEntry(node) {
+  const productIds = (node.products?.references?.nodes || []).map((p) => p.id);
+  const rewardIds = (node.rewardProducts?.references?.nodes || []).map(
+    (p) => p.id,
+  );
+  const type = node.bundleType?.value;
+  let config = {};
+  try {
+    config = JSON.parse(node.config?.value || "{}");
+  } catch {
+    config = {};
+  }
+
+  if (type === "volume") {
+    let volumeTiers = [];
+    try {
+      volumeTiers = JSON.parse(node.volumeTiers?.value || "[]");
+    } catch {
+      volumeTiers = [];
+    }
+    return { type, productId: productIds[0], productIds, volumeTiers };
+  }
+
+  if (type === "bogo") {
+    return {
+      type,
+      buyProductIds: productIds,
+      getProductIds: rewardIds,
+      buyQuantity: Number(config.buyQuantity || 1),
+      getQuantity: Number(config.getQuantity || 1),
+      rewardDiscountType: config.rewardDiscountType || "percentage",
+      rewardDiscountValue: Number(config.rewardDiscountValue || 0),
+    };
+  }
+
+  const entry = {
+    type,
+    productIds,
+    discountType: node.discountType?.value,
+    discountValue: Number(node.discountValue?.value || 0),
+  };
+
+  if (type === "multipack") {
+    entry.productId = productIds[0];
+    entry.packSize = Number(config.packSize || 1);
+  } else if (type === "variant") {
+    entry.productId = productIds[0];
+    entry.minItems = Number(node.minItems?.value || 1);
+    entry.maxItems = Number(node.maxItems?.value || 1);
+  } else if (type === "mix_match") {
+    entry.minItems = Number(node.minItems?.value || 1);
+    entry.maxItems = Number(node.maxItems?.value || productIds.length || 1);
+  } else if (type === "infinite") {
+    entry.minItems = Number(node.minItems?.value || 1);
+  }
+
+  return entry;
+}
+
 // Mirrors every active bundle's discount config into a shop metafield so the
 // checkout discount function can look it up by handle without calling back
 // into the Admin API at runtime (functions run sandboxed, no network access).
@@ -87,25 +184,10 @@ async function syncBundleIndex(admin) {
       query BundleIndexSource {
         shop { id }
         metaobjects(type: "$app:bundle", first: 50) {
-          nodes {
-            handle
-            status: field(key: "status") { value }
-            bundleType: field(key: "bundle_type") { value }
-            discountType: field(key: "discount_type") { value }
-            discountValue: field(key: "discount_value") { value }
-            minItems: field(key: "min_items") { value }
-            maxItems: field(key: "max_items") { value }
-            volumeTiers: field(key: "volume_tiers") { value }
-            products: field(key: "products") {
-              references(first: 20) {
-                nodes {
-                  ... on Product { id }
-                }
-              }
-            }
-          }
+          nodes { ...BundleFields }
         }
-      }`,
+      }
+      ${BUNDLE_FIELDS}`,
   );
   const json = await response.json();
   const shopId = json.data.shop.id;
@@ -114,30 +196,7 @@ async function syncBundleIndex(admin) {
   const index = {};
   for (const node of nodes) {
     if (node.status?.value !== "active") continue;
-    const productIds = (node.products?.references?.nodes || []).map(
-      (p) => p.id,
-    );
-    const type = node.bundleType?.value;
-    const entry = { type, productIds };
-
-    if (type === "volume") {
-      try {
-        entry.volumeTiers = JSON.parse(node.volumeTiers?.value || "[]");
-      } catch {
-        entry.volumeTiers = [];
-      }
-    } else {
-      entry.discountType = node.discountType?.value;
-      entry.discountValue = Number(node.discountValue?.value || 0);
-      if (type === "mix_match") {
-        entry.minItems = Number(node.minItems?.value || 1);
-        entry.maxItems = Number(
-          node.maxItems?.value || productIds.length || 1,
-        );
-      }
-    }
-
-    index[node.handle] = entry;
+    index[node.handle] = buildIndexEntry(node);
   }
 
   await admin.graphql(
@@ -223,6 +282,8 @@ export const action = async ({ request }) => {
   const status = formData.get("status") || "active";
   const sortOrder = formData.get("sortOrder") || "0";
   const productIds = JSON.parse(formData.get("productIds") || "[]");
+  const rewardProductIds = JSON.parse(formData.get("rewardProductIds") || "[]");
+  const config = JSON.parse(formData.get("config") || "{}");
 
   const fields = [
     { key: "title", value: title },
@@ -233,19 +294,27 @@ export const action = async ({ request }) => {
     { key: "bundle_type", value: bundleType },
     { key: "status", value: status },
     { key: "sort_order", value: sortOrder || "0" },
+    { key: "config", value: JSON.stringify(config) },
   ];
 
   if (bundleType === "volume") {
     fields.push({ key: "volume_tiers", value: volumeTiers });
+  } else if (bundleType === "bogo") {
+    fields.push({
+      key: "reward_products",
+      value: JSON.stringify(rewardProductIds),
+    });
   } else {
     fields.push({ key: "discount_type", value: discountType });
     fields.push({ key: "discount_value", value: discountValue || "0" });
-    if (bundleType === "mix_match") {
+    if (bundleType === "mix_match" || bundleType === "variant") {
       fields.push({ key: "min_items", value: minItems || "1" });
       fields.push({
         key: "max_items",
         value: maxItems || String(productIds.length || 1),
       });
+    } else if (bundleType === "infinite") {
+      fields.push({ key: "min_items", value: minItems || "1" });
     }
   }
 
@@ -279,6 +348,19 @@ function formatDiscount(bundle) {
       tiers = [];
     }
     return `${tiers.length} volume tier${tiers.length === 1 ? "" : "s"}`;
+  }
+  if (type === "bogo") {
+    let config = {};
+    try {
+      config = JSON.parse(bundle.config?.value || "{}");
+    } catch {
+      config = {};
+    }
+    const reward =
+      config.rewardDiscountType === "percentage"
+        ? `${config.rewardDiscountValue || 0}% off`
+        : `$${config.rewardDiscountValue || 0} off`;
+    return `Buy ${config.buyQuantity || 1}, get ${config.getQuantity || 1} (${reward})`;
   }
   const discountType = bundle.discountType?.value;
   const value = bundle.discountValue?.value;
@@ -325,6 +407,12 @@ export default function Bundles() {
     } catch {
       // keep default tiers
     }
+    let config = {};
+    try {
+      config = JSON.parse(bundle.config?.value || "{}");
+    } catch {
+      config = {};
+    }
     setForm({
       handle: bundle.handle,
       title: bundle.title?.value || "",
@@ -338,21 +426,44 @@ export default function Bundles() {
       maxItems: bundle.maxItems?.value || "2",
       status: bundle.status?.value || "active",
       sortOrder: bundle.sortOrder?.value || "0",
-      selectedProducts: (bundle.products?.references?.nodes || []).map(
+      selectedProducts: (bundle.products?.references?.nodes || []).map((p) => ({
+        id: p.id,
+        title: p.title,
+      })),
+      volumeTiers,
+      packSize: config.packSize != null ? String(config.packSize) : "3",
+      buyQuantity: config.buyQuantity != null ? String(config.buyQuantity) : "1",
+      getQuantity: config.getQuantity != null ? String(config.getQuantity) : "1",
+      rewardDiscountType: config.rewardDiscountType || "percentage",
+      rewardDiscountValue:
+        config.rewardDiscountValue != null
+          ? String(config.rewardDiscountValue)
+          : "100",
+      rewardProducts: (bundle.rewardProducts?.references?.nodes || []).map(
         (p) => ({ id: p.id, title: p.title }),
       ),
-      volumeTiers,
     });
   };
 
   const pickProducts = async () => {
     const selected = await shopify.resourcePicker({
       type: "product",
-      multiple: form.bundleType === "volume" ? false : true,
+      multiple: usesSingleProduct(form.bundleType) ? false : true,
       selectionIds: form.selectedProducts.map((p) => ({ id: p.id })),
     });
     if (selected) {
       setForm((prev) => ({ ...prev, selectedProducts: selected }));
+    }
+  };
+
+  const pickRewardProducts = async () => {
+    const selected = await shopify.resourcePicker({
+      type: "product",
+      multiple: true,
+      selectionIds: form.rewardProducts.map((p) => ({ id: p.id })),
+    });
+    if (selected) {
+      setForm((prev) => ({ ...prev, rewardProducts: selected }));
     }
   };
 
@@ -379,6 +490,21 @@ export default function Bundles() {
       ),
     }));
 
+  const buildConfig = () => {
+    if (form.bundleType === "multipack") {
+      return { packSize: Number(form.packSize) || 1 };
+    }
+    if (form.bundleType === "bogo") {
+      return {
+        buyQuantity: Number(form.buyQuantity) || 1,
+        getQuantity: Number(form.getQuantity) || 1,
+        rewardDiscountType: form.rewardDiscountType,
+        rewardDiscountValue: Number(form.rewardDiscountValue) || 0,
+      };
+    }
+    return {};
+  };
+
   const saveBundle = () => {
     fetcher.submit(
       {
@@ -397,6 +523,8 @@ export default function Bundles() {
         status: form.status,
         sortOrder: form.sortOrder,
         productIds: JSON.stringify(form.selectedProducts.map((p) => p.id)),
+        rewardProductIds: JSON.stringify(form.rewardProducts.map((p) => p.id)),
+        config: JSON.stringify(buildConfig()),
       },
       { method: "POST" },
     );
@@ -416,11 +544,29 @@ export default function Bundles() {
     );
   };
 
-  const canSave =
-    form.title &&
-    form.selectedProducts.length > 0 &&
-    (form.bundleType !== "mix_match" ||
-      Number(form.minItems) <= Number(form.maxItems));
+  const canSave = (() => {
+    if (!form.title) return false;
+    if (form.bundleType === "bogo") {
+      return (
+        form.selectedProducts.length > 0 && form.rewardProducts.length > 0
+      );
+    }
+    if (form.selectedProducts.length === 0) return false;
+    if (usesMinMax(form.bundleType)) {
+      return Number(form.minItems) <= Number(form.maxItems);
+    }
+    return true;
+  })();
+
+  const productPickerLabel = {
+    fixed: "Choose products",
+    variant: "Choose the product",
+    multipack: "Choose the product",
+    mix_match: "Choose eligible products",
+    infinite: "Choose eligible products",
+    volume: "Choose product",
+    bogo: "Choose “Buy” products",
+  }[form.bundleType];
 
   return (
     <s-page heading="Bundles">
@@ -459,7 +605,7 @@ export default function Bundles() {
             onInput={setField("description")}
           ></s-text-area>
 
-          {form.bundleType !== "volume" ? (
+          {usesDiscount(form.bundleType) ? (
             <s-stack direction="inline" gap="base">
               <s-select
                 label="Discount type"
@@ -488,21 +634,47 @@ export default function Bundles() {
             </s-stack>
           ) : null}
 
-          {form.bundleType === "mix_match" ? (
+          {form.bundleType === "multipack" ? (
+            <s-number-field
+              label="Pack size (units per pack)"
+              name="packSize"
+              value={form.packSize}
+              onInput={setField("packSize")}
+            ></s-number-field>
+          ) : null}
+
+          {usesMinMax(form.bundleType) ? (
             <s-stack direction="inline" gap="base">
               <s-number-field
-                label="Minimum items to pick"
+                label={
+                  form.bundleType === "variant"
+                    ? "Minimum variants to pick"
+                    : "Minimum items to pick"
+                }
                 name="minItems"
                 value={form.minItems}
                 onInput={setField("minItems")}
               ></s-number-field>
               <s-number-field
-                label="Maximum items to pick"
+                label={
+                  form.bundleType === "variant"
+                    ? "Maximum variants to pick"
+                    : "Maximum items to pick"
+                }
                 name="maxItems"
                 value={form.maxItems}
                 onInput={setField("maxItems")}
               ></s-number-field>
             </s-stack>
+          ) : null}
+
+          {usesMinOnly(form.bundleType) ? (
+            <s-number-field
+              label="Minimum items to pick"
+              name="minItems"
+              value={form.minItems}
+              onInput={setField("minItems")}
+            ></s-number-field>
           ) : null}
 
           {form.bundleType === "volume" ? (
@@ -552,14 +724,61 @@ export default function Bundles() {
             </s-stack>
           ) : null}
 
+          {form.bundleType === "bogo" ? (
+            <s-stack direction="block" gap="base">
+              <s-stack direction="inline" gap="base">
+                <s-number-field
+                  label="Buy quantity (from “Buy” products)"
+                  name="buyQuantity"
+                  value={form.buyQuantity}
+                  onInput={setField("buyQuantity")}
+                ></s-number-field>
+                <s-number-field
+                  label="Get quantity (from “Get” products)"
+                  name="getQuantity"
+                  value={form.getQuantity}
+                  onInput={setField("getQuantity")}
+                ></s-number-field>
+              </s-stack>
+              <s-stack direction="inline" gap="base">
+                <s-select
+                  label="Reward discount type"
+                  name="rewardDiscountType"
+                  value={form.rewardDiscountType}
+                  onChange={setField("rewardDiscountType")}
+                >
+                  {REWARD_DISCOUNT_TYPES.map((t) => (
+                    <s-option key={t.value} value={t.value}>
+                      {t.label}
+                    </s-option>
+                  ))}
+                </s-select>
+                <s-number-field
+                  label={
+                    form.rewardDiscountType === "percentage"
+                      ? "Percent off reward (100 = free)"
+                      : "Amount off reward"
+                  }
+                  name="rewardDiscountValue"
+                  value={form.rewardDiscountValue}
+                  onInput={setField("rewardDiscountValue")}
+                ></s-number-field>
+              </s-stack>
+              <s-stack direction="inline" gap="base" alignItems="center">
+                <s-button onClick={pickRewardProducts}>
+                  Choose “Get” products
+                </s-button>
+                <s-text>
+                  {form.rewardProducts.length > 0
+                    ? form.rewardProducts.map((p) => p.title).join(", ")
+                    : "No reward products selected"}
+                </s-text>
+              </s-stack>
+            </s-stack>
+          ) : null}
+
           <s-stack direction="inline" gap="base" alignItems="center">
-            <s-button onClick={pickProducts}>
-              {form.bundleType === "fixed"
-                ? "Choose products"
-                : form.bundleType === "mix_match"
-                  ? "Choose eligible products"
-                  : "Choose product"}
-            </s-button>
+            <s-button onClick={pickProducts}>{productPickerLabel}</s-button>
             <s-text>
               {form.selectedProducts.length > 0
                 ? form.selectedProducts.map((p) => p.title).join(", ")

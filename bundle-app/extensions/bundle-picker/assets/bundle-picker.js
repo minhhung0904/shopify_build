@@ -251,6 +251,125 @@ class BundleVolume extends HTMLElement {
   }
 }
 
+// Multipack: a single variant added at a fixed pack quantity, with the pack
+// price discounted as a whole.
+class BundleMultipack extends HTMLElement {
+  connectedCallback() {
+    this.variantSelect = this.querySelector('[data-bundle-variant-select]');
+    this.priceEl = this.querySelector('[data-bundle-price]');
+    this.submitBtn = this.querySelector('[data-bundle-submit]');
+    this.errorEl = this.querySelector('[data-bundle-error]');
+    this.packSize = Math.max(1, Number(this.dataset.packSize || 1));
+    if (!this.submitBtn) return;
+
+    this.variantSelect?.addEventListener('change', () => this.render());
+    this.submitBtn.addEventListener('click', () => this.onSubmit());
+    this.render();
+  }
+
+  currentVariant() {
+    if (this.variantSelect) {
+      const option = this.variantSelect.selectedOptions[0];
+      return { id: option?.value, price: Number(option?.dataset.price || 0) };
+    }
+    return {
+      id: this.dataset.variantId,
+      price: Number(this.dataset.price || 0),
+    };
+  }
+
+  render() {
+    const { price } = this.currentVariant();
+    const base = price * this.packSize;
+    const discounted = applyDiscount(
+      base,
+      this.dataset.discountType,
+      this.dataset.discountValue,
+    );
+    if (this.priceEl) {
+      this.priceEl.textContent = formatMoney(discounted, this.dataset.currency);
+    }
+  }
+
+  onSubmit() {
+    const { id } = this.currentVariant();
+    if (!id) return;
+    addBundleToCart({
+      lines: [{ id, quantity: this.packSize }],
+      bundleHandle: this.dataset.bundleHandle,
+      bundleTitle: this.dataset.bundleTitle,
+      cartAddUrl: this.dataset.cartAddUrl,
+      cartUrl: this.dataset.cartUrl,
+      submitBtn: this.submitBtn,
+      errorEl: this.errorEl,
+    });
+  }
+}
+
+// BOGO: buy N of a chosen "buy" variant, get M of a chosen "get" variant at a
+// reward discount. Both lines share the bundle grouping so the discount
+// function can validate the pair and discount only the "get" line.
+class BundleBogo extends HTMLElement {
+  connectedCallback() {
+    this.buySelect = this.querySelector('[data-bogo-buy]');
+    this.getSelect = this.querySelector('[data-bogo-get]');
+    this.priceEl = this.querySelector('[data-bundle-price]');
+    this.submitBtn = this.querySelector('[data-bundle-submit]');
+    this.errorEl = this.querySelector('[data-bundle-error]');
+    this.buyQty = Math.max(1, Number(this.dataset.buyQuantity || 1));
+    this.getQty = Math.max(1, Number(this.dataset.getQuantity || 1));
+    if (!this.submitBtn) return;
+
+    this.buySelect?.addEventListener('change', () => this.render());
+    this.getSelect?.addEventListener('change', () => this.render());
+    this.submitBtn.addEventListener('click', () => this.onSubmit());
+    this.render();
+  }
+
+  selected(select) {
+    const option = select?.selectedOptions[0];
+    return { id: option?.value, price: Number(option?.dataset.price || 0) };
+  }
+
+  render() {
+    const buy = this.selected(this.buySelect);
+    const get = this.selected(this.getSelect);
+    const buyBase = buy.price * this.buyQty;
+    const getBase = get.price * this.getQty;
+    const discountedGet = applyDiscount(
+      getBase,
+      this.dataset.rewardDiscountType,
+      this.dataset.rewardDiscountValue,
+    );
+    if (this.priceEl) {
+      this.priceEl.textContent = formatMoney(
+        buyBase + discountedGet,
+        this.dataset.currency,
+      );
+    }
+  }
+
+  onSubmit() {
+    const buy = this.selected(this.buySelect);
+    const get = this.selected(this.getSelect);
+    const lines = [];
+    if (buy.id) lines.push({ id: buy.id, quantity: this.buyQty });
+    if (get.id) lines.push({ id: get.id, quantity: this.getQty });
+    if (!lines.length) return;
+    addBundleToCart({
+      lines,
+      bundleHandle: this.dataset.bundleHandle,
+      bundleTitle: this.dataset.bundleTitle,
+      cartAddUrl: this.dataset.cartAddUrl,
+      cartUrl: this.dataset.cartUrl,
+      submitBtn: this.submitBtn,
+      errorEl: this.errorEl,
+    });
+  }
+}
+
 customElements.define('bundle-add-to-cart', BundleFixed);
 customElements.define('bundle-mix-match', BundleMixMatch);
 customElements.define('bundle-volume', BundleVolume);
+customElements.define('bundle-multipack', BundleMultipack);
+customElements.define('bundle-bogo', BundleBogo);

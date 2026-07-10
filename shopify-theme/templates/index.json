@@ -6,10 +6,11 @@
         "slide_1": {
           "type": "slide",
           "settings": {
+            "asset_image": "hero-pokemon.webp",
             "image_overlay_opacity": 10,
-            "heading": "Welcome to Our Store",
+            "heading": "Poke Style",
             "heading_size": "hxl",
-            "subheading": "Handcrafted products made with care, shipped worldwide.",
+            "subheading": "Get yours below",
             "button_label": "Shop now",
             "link": "shopify://collections/all",
             "button_style_secondary": false,

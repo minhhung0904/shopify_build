@@ -1,0 +1,40 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "40.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/40",
+              "product": { "id": "gid://shopify/Product/40" }
+            },
+            "bundleHandle": { "value": "bundle-bogo-1" },
+            "bundleInstance": { "value": "instance-6" }
+          }
+        ]
+      },
+      "discount": { "discountClasses": ["PRODUCT"] },
+      "shop": {
+        "bundleIndex": {
+          "jsonValue": {
+            "bundle-bogo-1": {
+              "type": "bogo",
+              "buyProductIds": ["gid://shopify/Product/40"],
+              "getProductIds": ["gid://shopify/Product/41"],
+              "buyQuantity": 1,
+              "getQuantity": 1,
+              "rewardDiscountType": "percentage",
+              "rewardDiscountValue": 100
+            }
+          }
+        }
+      }
+    },
+    "output": { "operations": [] }
+  }
+}

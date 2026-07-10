@@ -71,6 +71,22 @@ function buildCandidate(bundle, lines) {
     return discountCandidate([line], tier.discountType, tier.value);
   }
 
+  // BOGO discounts only the "get" lines; the "buy" lines stay full price.
+  if (bundle.type === 'bogo') {
+    const getSet = new Set(bundle.getProductIds || []);
+    const getLines = lines.filter((line) =>
+      getSet.has(line.merchandise?.product?.id),
+    );
+    if (!getLines.length) return null;
+    return discountCandidate(
+      getLines,
+      bundle.rewardDiscountType,
+      bundle.rewardDiscountValue,
+    );
+  }
+
+  // fixed / variant / multipack / mix_match / infinite all share the same
+  // group-discount path (percentage, amount off, or a fixed target price).
   if (bundle.discountType === 'fixed_price') {
     const amount = fixedPriceDiscountAmount(lines, bundle.discountValue);
     if (amount <= 0) return null;
@@ -85,8 +101,32 @@ function buildCandidate(bundle, lines) {
 // cheaper bundle only works if their cart happens to already satisfy that
 // bundle's real product requirements — otherwise no discount is applied.
 function isValidGroup(bundle, lines) {
-  const configured = new Set(bundle.productIds || []);
   const productIds = lines.map((line) => line.merchandise?.product?.id);
+
+  // BOGO validates against two separate sets, so it's handled on its own.
+  if (bundle.type === 'bogo') {
+    return isValidBogo(bundle, lines);
+  }
+
+  // Variant bundle: several variants of ONE configured product, counted by
+  // the number of cart lines (each variant is its own line).
+  if (bundle.type === 'variant') {
+    if (productIds.some((id) => !id || id !== bundle.productId)) return false;
+    const count = lines.length;
+    const min = Number(bundle.minItems) || 1;
+    const max = Number(bundle.maxItems) || count;
+    return count >= min && count <= max;
+  }
+
+  // Multipack: a single line of one configured product, quantity ≥ pack size.
+  if (bundle.type === 'multipack') {
+    if (lines.length !== 1) return false;
+    const line = lines[0];
+    if (line.merchandise?.product?.id !== bundle.productId) return false;
+    return line.quantity >= (Number(bundle.packSize) || 1);
+  }
+
+  const configured = new Set(bundle.productIds || []);
   if (productIds.some((id) => !id || !configured.has(id))) return false;
 
   if (bundle.type === 'fixed') {
@@ -97,10 +137,39 @@ function isValidGroup(bundle, lines) {
     const max = Number(bundle.maxItems) || productIds.length;
     return productIds.length >= min && productIds.length <= max;
   }
+  if (bundle.type === 'infinite') {
+    const min = Number(bundle.minItems) || 1;
+    return productIds.length >= min;
+  }
   if (bundle.type === 'volume') {
     return productIds.length === 1;
   }
   return false;
+}
+
+// Re-checks a BOGO group: every line must belong to the buy or get set, and
+// both the buy and get quantity thresholds must be met. A "get" product is
+// counted toward the get total even if it also appears in the buy set.
+function isValidBogo(bundle, lines) {
+  const buySet = new Set(bundle.buyProductIds || []);
+  const getSet = new Set(bundle.getProductIds || []);
+  let buyQty = 0;
+  let getQty = 0;
+  for (const line of lines) {
+    const id = line.merchandise?.product?.id;
+    if (!id) return false;
+    if (getSet.has(id)) {
+      getQty += line.quantity;
+    } else if (buySet.has(id)) {
+      buyQty += line.quantity;
+    } else {
+      return false;
+    }
+  }
+  return (
+    buyQty >= (Number(bundle.buyQuantity) || 1) &&
+    getQty >= (Number(bundle.getQuantity) || 1)
+  );
 }
 
 function pickVolumeTier(tiers, quantity) {
