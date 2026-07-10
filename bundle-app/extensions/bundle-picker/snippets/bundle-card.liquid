@@ -293,52 +293,57 @@
               {%- endfor -%}
             ]
           </script>
+          <script type="application/json" data-bp-addons>
+            [
+              {%- for ap in reward_products -%}
+                {%- assign av = ap.selected_or_first_available_variant | default: ap.variants.first -%}
+                {%- assign aimg = av.featured_image | default: ap.featured_image -%}
+                {"id":{{ av.id }},"title":{{ ap.title | json }},"price":{{ av.price }},"available":{{ ap.available }},"image":{{ aimg | image_url: width: 120 | json }}}{%- unless forloop.last -%},{%- endunless -%}
+              {%- endfor -%}
+            ]
+          </script>
+          <script type="application/json" data-bp-addon-discount>
+            {"discountType":{{ config.addOnDiscountType | default: 'percentage' | json }},"discountValue":{{ config.addOnDiscountValue | default: 0 }}}
+          </script>
 
           <ul class="bp-tierlist" role="list" data-bp-tiers>
             {%- for tier in config.tiers -%}
-              <li>
-                <label class="bp-tierrow{% if tier.mostPopular %} is-popular{% endif %}">
+              <li
+                class="bp-tier2{% if tier.mostPopular %} is-popular{% endif %}"
+                data-tier-index="{{ forloop.index0 }}"
+                data-quantity="{{ tier.quantity }}"
+                data-discount-type="{{ tier.discountType }}"
+                data-discount-value="{{ tier.discountValue }}"
+              >
+                <label class="bp-tier2__head">
                   <input
                     type="radio"
                     name="bp-tier-{{ block_id }}-{{ handle }}"
-                    class="bp-tierrow__radio"
+                    class="bp-tier2__radio"
                     value="{{ forloop.index0 }}"
-                    data-quantity="{{ tier.quantity }}"
-                    data-discount-type="{{ tier.discountType }}"
-                    data-discount-value="{{ tier.discountValue }}"
                     {% if tier.mostPopular %}checked{% endif %}
                   >
-                  {%- if tier.mostPopular -%}
-                    <span class="bp-tierrow__ribbon">Most popular</span>
-                  {%- endif -%}
-                  <span class="bp-tierrow__main">
-                    <span class="bp-tierrow__title">
+                  <span class="bp-tier2__info">
+                    <span class="bp-tier2__title">
                       {{ tier.title | default: tier.quantity }}
-                    </span>
-                    <span class="bp-tierrow__meta">
-                      {{ tier.quantity }} × {{ product.title }}
-                    </span>
-                  </span>
-                  {%- if tier.discountValue > 0 -%}
-                    <span class="bp-tierrow__save">
-                      {%- if tier.discountType == 'percentage' -%}
-                        −{{ tier.discountValue }}%
-                      {%- else -%}
-                        −{{ tier.discountValue | times: 100 | money }}
+                      {%- if tier.discountValue > 0 -%}
+                        <span class="bp-tier2__savepill" data-bp-savepill></span>
                       {%- endif -%}
                     </span>
+                    <span class="bp-tier2__sub" data-bp-sub></span>
+                  </span>
+                  <span class="bp-tier2__prices">
+                    <span class="bp-tier2__now" data-bp-now></span>
+                    <s class="bp-tier2__was" data-bp-was></s>
+                  </span>
+                  {%- if tier.mostPopular -%}
+                    <span class="bp-tier2__ribbon">Most Popular</span>
                   {%- endif -%}
                 </label>
+                <div class="bp-tier2__body" data-bp-body hidden></div>
               </li>
             {%- endfor -%}
           </ul>
-
-          <div class="bp-slots" data-bp-slots></div>
-
-          <div class="bp-priceblock">
-            <span class="bp-priceblock__now" data-bundle-price></span>
-            <s data-bundle-compare class="bp-priceblock__was"></s>
-          </div>
 
           <button type="button" class="bp-card__submit" data-bundle-submit>
             Add bundle to cart

@@ -200,7 +200,15 @@ function buildIndexEntry(node) {
       discountType: t.discountType || "percentage",
       discountValue: Number(t.discountValue) || 0,
     }));
-    return { type, productId: productIds[0], productIds, tiers };
+    return {
+      type,
+      productId: productIds[0],
+      productIds,
+      tiers,
+      addOnProductIds: rewardIds,
+      addOnDiscountType: config.addOnDiscountType || "percentage",
+      addOnDiscountValue: Number(config.addOnDiscountValue || 0),
+    };
   }
 
   if (type === "bogo") {
@@ -363,7 +371,8 @@ export const action = async ({ request }) => {
 
   if (bundleType === "volume") {
     fields.push({ key: "volume_tiers", value: volumeTiers });
-  } else if (bundleType === "bogo") {
+  } else if (bundleType === "bogo" || bundleType === "tiered") {
+    // bogo: "get" products; tiered: add-on products — both live in reward_products
     fields.push({
       key: "reward_products",
       value: JSON.stringify(rewardProductIds),
@@ -535,11 +544,14 @@ export default function Bundles() {
       packSize: config.packSize != null ? String(config.packSize) : "3",
       buyQuantity: config.buyQuantity != null ? String(config.buyQuantity) : "1",
       getQuantity: config.getQuantity != null ? String(config.getQuantity) : "1",
-      rewardDiscountType: config.rewardDiscountType || "percentage",
+      rewardDiscountType:
+        config.rewardDiscountType || config.addOnDiscountType || "percentage",
       rewardDiscountValue:
         config.rewardDiscountValue != null
           ? String(config.rewardDiscountValue)
-          : "100",
+          : config.addOnDiscountValue != null
+            ? String(config.addOnDiscountValue)
+            : "100",
       rewardProducts: (bundle.rewardProducts?.references?.nodes || []).map(
         (p) => ({ id: p.id, title: p.title }),
       ),
@@ -675,6 +687,8 @@ export default function Bundles() {
           discountValue: Number(t.value) || 0,
           mostPopular: !!t.mostPopular,
         })),
+        addOnDiscountType: form.rewardDiscountType,
+        addOnDiscountValue: Number(form.rewardDiscountValue) || 0,
       };
     }
     return {};
@@ -1120,6 +1134,49 @@ export default function Bundles() {
             </s-stack>
           ) : null}
 
+          {form.bundleType === "tiered" ? (
+            <s-stack direction="block" gap="base">
+              <s-text type="strong">
+                Add-on products (optional — shown as checkboxes under the
+                selected tier)
+              </s-text>
+              <s-stack direction="inline" gap="base">
+                <s-select
+                  label="Add-on discount type"
+                  name="rewardDiscountType"
+                  value={form.rewardDiscountType}
+                  onChange={setField("rewardDiscountType")}
+                >
+                  {REWARD_DISCOUNT_TYPES.map((t) => (
+                    <s-option key={t.value} value={t.value}>
+                      {t.label}
+                    </s-option>
+                  ))}
+                </s-select>
+                <s-number-field
+                  label={
+                    form.rewardDiscountType === "percentage"
+                      ? "Percent off add-ons"
+                      : "Amount off add-ons"
+                  }
+                  name="rewardDiscountValue"
+                  value={form.rewardDiscountValue}
+                  onInput={setField("rewardDiscountValue")}
+                ></s-number-field>
+              </s-stack>
+              <s-stack direction="inline" gap="base" alignItems="center">
+                <s-button onClick={pickRewardProducts}>
+                  Choose add-on products
+                </s-button>
+                <s-text>
+                  {form.rewardProducts.length > 0
+                    ? form.rewardProducts.map((p) => p.title).join(", ")
+                    : "No add-on products"}
+                </s-text>
+              </s-stack>
+            </s-stack>
+          ) : null}
+
           {form.bundleType === "bogo" ? (
             <s-stack direction="block" gap="base">
               <s-stack direction="inline" gap="base">
@@ -1240,9 +1297,13 @@ export default function Bundles() {
                   </s-paragraph>
                 )}
 
-                {form.bundleType === "bogo" ? (
+                {form.bundleType === "bogo" || form.bundleType === "tiered" ? (
                   <>
-                    <s-text type="strong">Get products</s-text>
+                    <s-text type="strong">
+                      {form.bundleType === "tiered"
+                        ? "Add-on products"
+                        : "Get products"}
+                    </s-text>
                     {form.rewardProducts.length > 0 ? (
                       <s-unordered-list>
                         {form.rewardProducts.map((p) => (

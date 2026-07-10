@@ -368,144 +368,248 @@ class BundleBogo extends HTMLElement {
   }
 }
 
-// Tiered "Bundle & Save": choose a tier (1/2/3 units), then pick a variant per
-// slot via swatches. Discount escalates by tier; all slot lines share the
-// bundle grouping so the function applies the tier discount at checkout.
+// Tiered "Bundle & Save": full-width tier rows; selecting one expands it to
+// per-slot variant dropdowns plus optional add-on checkboxes. The tier discount
+// applies to the main product lines and the add-on discount to the add-ons.
 class BundleTiered extends HTMLElement {
   connectedCallback() {
-    this.variants = this.parseVariants();
-    this.slotsEl = this.querySelector('[data-bp-slots]');
-    this.priceEl = this.querySelector('[data-bundle-price]');
-    this.compareEl = this.querySelector('[data-bundle-compare]');
+    this.variants = this.parseJSON('[data-bp-variants]', []);
+    this.addOns = this.parseJSON('[data-bp-addons]', []);
+    this.addOnDiscount = this.parseJSON('[data-bp-addon-discount]', {
+      discountType: 'percentage',
+      discountValue: 0,
+    });
+    this.tierEls = Array.from(this.querySelectorAll('.bp-tier2'));
+    this.radios = Array.from(this.querySelectorAll('.bp-tier2__radio'));
     this.submitBtn = this.querySelector('[data-bundle-submit]');
     this.errorEl = this.querySelector('[data-bundle-error]');
-    this.radios = Array.from(this.querySelectorAll('.bp-tierrow__radio'));
-    this.selection = [];
-    if (!this.submitBtn || !this.radios.length || !this.variants.length) return;
+    if (!this.submitBtn || !this.tierEls.length || !this.variants.length) return;
+
+    this.selection = []; // chosen variant id per main slot (selected tier)
+    this.addOnChecked = new Set(this.addOns.map((a) => String(a.id)));
 
     this.radios.forEach((r) =>
-      r.addEventListener('change', () => this.onTierChange()),
+      r.addEventListener('change', () => this.selectTier()),
     );
     this.submitBtn.addEventListener('click', () => this.onSubmit());
 
     const checked = this.radios.find((r) => r.checked) || this.radios[0];
     checked.checked = true;
-    this.onTierChange();
+    this.selectTier();
   }
 
-  parseVariants() {
-    const script = this.querySelector('[data-bp-variants]');
+  parseJSON(sel, fallback) {
+    const el = this.querySelector(sel);
+    if (!el) return fallback;
     try {
-      return JSON.parse(script.textContent);
+      return JSON.parse(el.textContent);
     } catch {
-      return [];
+      return fallback;
     }
   }
 
   availableVariants() {
-    const avail = this.variants.filter((v) => v.available);
-    return avail.length ? avail : this.variants;
+    const a = this.variants.filter((v) => v.available);
+    return a.length ? a : this.variants;
   }
 
-  currentTier() {
+  defaultUnitPrice() {
+    const a = this.availableVariants();
+    return a.length ? a[0].price : 0;
+  }
+
+  selectedIndex() {
     const r = this.radios.find((x) => x.checked) || this.radios[0];
+    return Number(r.value) || 0;
+  }
+
+  tierMeta(el) {
     return {
-      quantity: Math.max(1, Number(r.dataset.quantity) || 1),
-      discountType: r.dataset.discountType,
-      discountValue: Number(r.dataset.discountValue) || 0,
+      quantity: Math.max(1, Number(el.dataset.quantity) || 1),
+      discountType: el.dataset.discountType,
+      discountValue: Number(el.dataset.discountValue) || 0,
     };
   }
 
-  onTierChange() {
-    this.radios.forEach((r) =>
-      r
-        .closest('.bp-tierrow')
-        ?.classList.toggle('is-selected', r.checked),
-    );
-    const tier = this.currentTier();
+  selectTier() {
+    const idx = this.selectedIndex();
+    const tier = this.tierMeta(this.tierEls[idx]);
     const avail = this.availableVariants();
-    const next = [];
+    this.selection = [];
     for (let i = 0; i < tier.quantity; i++) {
-      const prev = this.selection[i];
-      const stillValid =
-        prev != null &&
-        this.variants.some(
-          (v) => String(v.id) === String(prev) && v.available,
-        );
-      next.push(stillValid ? prev : avail[i % avail.length]?.id ?? avail[0]?.id);
+      this.selection.push(avail[i % avail.length]?.id ?? avail[0]?.id);
     }
-    this.selection = next;
-    this.renderSlots(tier);
-    this.render();
+    this.tierEls.forEach((el, i) => {
+      const sel = i === idx;
+      el.classList.toggle('is-selected', sel);
+      const body = el.querySelector('[data-bp-body]');
+      if (!body) return;
+      body.hidden = !sel;
+      if (sel) this.renderBody(body, tier);
+      else body.innerHTML = '';
+    });
+    this.renderSummaries();
   }
 
-  renderSlots(tier) {
-    if (!this.slotsEl) return;
-    this.slotsEl.innerHTML = '';
+  renderBody(body, tier) {
+    body.innerHTML = '';
+
+    const label = document.createElement('span');
+    label.className = 'bp-vlabel';
+    label.textContent = 'Variant';
+    body.appendChild(label);
+
     for (let slot = 0; slot < tier.quantity; slot++) {
-      const group = document.createElement('div');
-      group.className = 'bp-slot';
+      const row = document.createElement('div');
+      row.className = 'bp-vslot';
 
-      const label = document.createElement('span');
-      label.className = 'bp-slot__label';
-      label.textContent = tier.quantity > 1 ? `Item ${slot + 1}` : 'Choose your item';
-      group.appendChild(label);
+      const img = document.createElement('img');
+      img.className = 'bp-vslot__img';
 
-      const swatches = document.createElement('div');
-      swatches.className = 'bp-swatches';
+      const select = document.createElement('select');
+      select.className = 'bp-vslot__select';
       this.variants.forEach((v) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'bp-swatch';
-        btn.title = v.title;
-        if (!v.available) btn.disabled = true;
-        if (String(this.selection[slot]) === String(v.id)) {
-          btn.classList.add('is-selected');
-        }
-        if (v.image) {
-          const img = document.createElement('img');
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.title;
+        if (!v.available) opt.disabled = true;
+        if (String(v.id) === String(this.selection[slot])) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      const syncImg = () => {
+        const v = this.variants.find(
+          (x) => String(x.id) === String(this.selection[slot]),
+        );
+        if (v && v.image) {
           img.src = v.image;
           img.alt = v.title;
-          img.loading = 'lazy';
-          btn.appendChild(img);
         } else {
-          btn.textContent = v.title;
+          img.removeAttribute('src');
         }
-        btn.addEventListener('click', () => {
-          this.selection[slot] = v.id;
-          this.renderSlots(this.currentTier());
-          this.render();
-        });
-        swatches.appendChild(btn);
+      };
+      syncImg();
+      select.addEventListener('change', () => {
+        this.selection[slot] = select.value;
+        syncImg();
+        this.renderSummaries();
       });
-      group.appendChild(swatches);
-      this.slotsEl.appendChild(group);
+
+      row.appendChild(img);
+      row.appendChild(select);
+      body.appendChild(row);
+    }
+
+    if (this.addOns.length) {
+      const wrap = document.createElement('div');
+      wrap.className = 'bp-addons';
+      this.addOns.forEach((a) => {
+        const row = document.createElement('label');
+        row.className = 'bp-addon';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'bp-addon__cb';
+        if (a.available === false) {
+          cb.disabled = true;
+          this.addOnChecked.delete(String(a.id));
+        }
+        cb.checked = this.addOnChecked.has(String(a.id));
+        cb.addEventListener('change', () => {
+          if (cb.checked) this.addOnChecked.add(String(a.id));
+          else this.addOnChecked.delete(String(a.id));
+        });
+
+        const img = document.createElement('img');
+        img.className = 'bp-addon__img';
+        if (a.image) {
+          img.src = a.image;
+          img.alt = a.title;
+        }
+
+        const name = document.createElement('span');
+        name.className = 'bp-addon__name';
+        name.textContent = a.title;
+
+        const prices = document.createElement('span');
+        prices.className = 'bp-addon__prices';
+        const now = document.createElement('span');
+        now.className = 'bp-addon__now';
+        const disc = applyDiscount(
+          a.price,
+          this.addOnDiscount.discountType,
+          this.addOnDiscount.discountValue,
+        );
+        now.textContent = formatMoney(disc, this.dataset.currency);
+        prices.appendChild(now);
+        if (disc < a.price) {
+          const was = document.createElement('s');
+          was.className = 'bp-addon__was';
+          was.textContent = formatMoney(a.price, this.dataset.currency);
+          prices.appendChild(was);
+        }
+
+        row.appendChild(cb);
+        row.appendChild(img);
+        row.appendChild(name);
+        row.appendChild(prices);
+        wrap.appendChild(row);
+      });
+      body.appendChild(wrap);
     }
   }
 
-  render() {
-    const tier = this.currentTier();
-    const base = this.selection.reduce((sum, id) => {
-      const v = this.variants.find((x) => String(x.id) === String(id));
-      return sum + (v ? v.price : 0);
-    }, 0);
-    const discounted = applyDiscount(base, tier.discountType, tier.discountValue);
-    if (this.priceEl) {
-      this.priceEl.textContent = formatMoney(discounted, this.dataset.currency);
-    }
-    if (this.compareEl) {
-      const show = discounted < base;
-      this.compareEl.textContent = show
-        ? formatMoney(base, this.dataset.currency)
-        : '';
-      this.compareEl.style.display = show ? '' : 'none';
-    }
+  renderSummaries() {
+    const selIdx = this.selectedIndex();
+    this.tierEls.forEach((el, i) => {
+      const tier = this.tierMeta(el);
+      let base;
+      if (i === selIdx) {
+        base = this.selection.reduce((sum, id) => {
+          const v = this.variants.find((x) => String(x.id) === String(id));
+          return sum + (v ? v.price : 0);
+        }, 0);
+      } else {
+        base = this.defaultUnitPrice() * tier.quantity;
+      }
+      const now = applyDiscount(base, tier.discountType, tier.discountValue);
+      const saved = Math.max(0, base - now);
+
+      const nowEl = el.querySelector('[data-bp-now]');
+      const wasEl = el.querySelector('[data-bp-was]');
+      const subEl = el.querySelector('[data-bp-sub]');
+      const pillEl = el.querySelector('[data-bp-savepill]');
+
+      if (nowEl) nowEl.textContent = formatMoney(now, this.dataset.currency);
+      if (wasEl) {
+        const show = now < base;
+        wasEl.textContent = show ? formatMoney(base, this.dataset.currency) : '';
+        wasEl.style.display = show ? '' : 'none';
+      }
+      if (subEl) {
+        if (saved > 0) {
+          const pct = base > 0 ? Math.round((saved / base) * 100) : 0;
+          subEl.textContent = `You save ${pct}%`;
+        } else {
+          subEl.textContent = 'Standard price';
+        }
+      }
+      if (pillEl) {
+        pillEl.textContent =
+          saved > 0 ? `SAVE ${formatMoney(saved, this.dataset.currency)}` : '';
+        pillEl.style.display = saved > 0 ? '' : 'none';
+      }
+    });
   }
 
   onSubmit() {
-    const lines = this.selection
+    const lines = [];
+    this.selection
       .filter((id) => id != null)
-      .map((id) => ({ id, quantity: 1 }));
+      .forEach((id) => lines.push({ id, quantity: 1 }));
+    this.addOns
+      .filter((a) => this.addOnChecked.has(String(a.id)))
+      .forEach((a) => lines.push({ id: a.id, quantity: 1 }));
     if (!lines.length) return;
     addBundleToCart({
       lines,

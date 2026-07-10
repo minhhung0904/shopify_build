@@ -22,9 +22,15 @@ export function cartLinesDiscountsGenerateRun(input) {
   const bundleIndex = parseBundleIndex(input.shop.bundleIndex?.jsonValue);
   if (!bundleIndex) return EMPTY_RESULT;
 
-  const candidates = groupCartLines(input.cart.lines)
-    .map(({ handle, lines }) => buildCandidate(bundleIndex[handle], lines))
-    .filter(Boolean);
+  // A group can yield more than one candidate (e.g. a tiered bundle discounts
+  // its main lines and its add-on lines at different rates), so flatten.
+  const candidates = groupCartLines(input.cart.lines).flatMap(
+    ({ handle, lines }) => {
+      const result = buildCandidate(bundleIndex[handle], lines);
+      if (!result) return [];
+      return Array.isArray(result) ? result : [result];
+    },
+  );
 
   if (!candidates.length) return EMPTY_RESULT;
 
@@ -71,14 +77,38 @@ function buildCandidate(bundle, lines) {
     return discountCandidate([line], tier.discountType, tier.value);
   }
 
-  // Tiered "Bundle & Save": one product, several variants allowed. The tier is
-  // chosen by the total unit count across the grouped lines; its discount
-  // applies to every line in the group.
+  // Tiered "Bundle & Save": the main product (any variant) is discounted by the
+  // tier matching its total units; optional add-on products in the same group
+  // are discounted at their own rate. Returns up to two candidates.
   if (bundle.type === 'tiered') {
-    const total = lines.reduce((sum, line) => sum + line.quantity, 0);
-    const tier = pickTieredTier(bundle.tiers, total);
-    if (!tier) return null;
-    return discountCandidate(lines, tier.discountType, tier.discountValue);
+    const addOnSet = new Set(bundle.addOnProductIds || []);
+    const mainLines = lines.filter(
+      (line) => line.merchandise?.product?.id === bundle.productId,
+    );
+    const addOnLines = lines.filter((line) =>
+      addOnSet.has(line.merchandise?.product?.id),
+    );
+    const mainUnits = mainLines.reduce((sum, line) => sum + line.quantity, 0);
+    const tier = pickTieredTier(bundle.tiers, mainUnits);
+
+    const candidates = [];
+    if (tier) {
+      const main = discountCandidate(
+        mainLines,
+        tier.discountType,
+        tier.discountValue,
+      );
+      if (main) candidates.push(main);
+    }
+    if (addOnLines.length) {
+      const addOn = discountCandidate(
+        addOnLines,
+        bundle.addOnDiscountType,
+        bundle.addOnDiscountValue,
+      );
+      if (addOn) candidates.push(addOn);
+    }
+    return candidates.length ? candidates : null;
   }
 
   // BOGO discounts only the "get" lines; the "buy" lines stay full price.
@@ -128,15 +158,24 @@ function isValidGroup(bundle, lines) {
     return count >= min && count <= max;
   }
 
-  // Tiered: every line must be the configured product (any variant), and the
-  // total units must reach at least the smallest tier.
+  // Tiered: every line must be the main product (any variant) or a configured
+  // add-on, and the MAIN units must reach at least the smallest tier.
   if (bundle.type === 'tiered') {
-    if (productIds.some((id) => !id || id !== bundle.productId)) return false;
-    const total = lines.reduce((sum, line) => sum + line.quantity, 0);
+    const addOnSet = new Set(bundle.addOnProductIds || []);
+    if (
+      productIds.some(
+        (id) => !id || (id !== bundle.productId && !addOnSet.has(id)),
+      )
+    ) {
+      return false;
+    }
+    const mainUnits = lines
+      .filter((line) => line.merchandise?.product?.id === bundle.productId)
+      .reduce((sum, line) => sum + line.quantity, 0);
     const tiers = bundle.tiers || [];
     if (!tiers.length) return false;
     const smallest = Math.min(...tiers.map((t) => Number(t.quantity) || 1));
-    return total >= smallest;
+    return mainUnits >= smallest;
   }
 
   // Multipack: a single line of one configured product, quantity ≥ pack size.
