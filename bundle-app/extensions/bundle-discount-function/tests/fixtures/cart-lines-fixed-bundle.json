@@ -1,0 +1,82 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "cost": {
+              "subtotalAmount": {
+                "amount": "20.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/1",
+              "product": {
+                "id": "gid://shopify/Product/1"
+              }
+            },
+            "bundleHandle": { "value": "bundle-fixed-1" },
+            "bundleInstance": { "value": "instance-1" }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 1,
+            "cost": {
+              "subtotalAmount": {
+                "amount": "30.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/2",
+              "product": {
+                "id": "gid://shopify/Product/2"
+              }
+            },
+            "bundleHandle": { "value": "bundle-fixed-1" },
+            "bundleInstance": { "value": "instance-1" }
+          }
+        ]
+      },
+      "discount": {
+        "discountClasses": ["PRODUCT"]
+      },
+      "shop": {
+        "bundleIndex": {
+          "jsonValue": {
+            "bundle-fixed-1": {
+              "type": "fixed",
+              "discountType": "percentage",
+              "discountValue": 15,
+              "productIds": ["gid://shopify/Product/1", "gid://shopify/Product/2"]
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "operations": [
+        {
+          "productDiscountsAdd": {
+            "candidates": [
+              {
+                "message": "Bundle discount",
+                "targets": [
+                  { "cartLine": { "id": "gid://shopify/CartLine/0" } },
+                  { "cartLine": { "id": "gid://shopify/CartLine/1" } }
+                ],
+                "value": {
+                  "percentage": { "value": 15.0 }
+                }
+              }
+            ],
+            "selectionStrategy": "ALL"
+          }
+        }
+      ]
+    }
+  }
+}

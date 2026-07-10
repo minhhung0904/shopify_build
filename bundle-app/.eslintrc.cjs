@@ -19,7 +19,15 @@ module.exports = {
     commonjs: true,
     es6: true,
   },
-  ignorePatterns: ["!**/.server", "!**/.client"],
+  ignorePatterns: [
+    "!**/.server",
+    "!**/.client",
+    // Function extensions are their own workspace package with their own
+    // test runner (vitest) and generated types — not covered by the app's
+    // React Router / browser lint rules.
+    "extensions/*/tests",
+    "extensions/*/generated",
+  ],
 
   // Base config
   extends: ["eslint:recommended"],

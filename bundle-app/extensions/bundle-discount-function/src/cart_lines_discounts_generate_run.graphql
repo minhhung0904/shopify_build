@@ -1,0 +1,35 @@
+query CartInput {
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        subtotalAmount {
+          amount
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            id
+          }
+        }
+      }
+      bundleHandle: attribute(key: "_bundle_handle") {
+        value
+      }
+      bundleInstance: attribute(key: "_bundle_instance") {
+        value
+      }
+    }
+  }
+  discount {
+    discountClasses
+  }
+  shop {
+    bundleIndex: metafield(key: "bundle_index") {
+      jsonValue
+    }
+  }
+}

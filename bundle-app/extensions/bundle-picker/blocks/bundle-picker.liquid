@@ -135,6 +135,112 @@
   .bundle-picker-{{ block.id }} .bp-card__error.is-visible {
     display: block;
   }
+
+  .bundle-picker-{{ block.id }} .bp-card__variant-select {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 0.4rem;
+    border: 0.1rem solid #d9d9d9;
+    font-size: 1.3rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-card__counter {
+    font-size: 1.3rem;
+    opacity: 0.7;
+    margin: 0;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-pool-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.8rem;
+    border: 0.2rem solid #e3e3e3;
+    border-radius: 0.6rem;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-pool-item.is-selected {
+    border-color: var(--bp-accent);
+  }
+
+  .bundle-picker-{{ block.id }} .bp-pool-item img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 0.4rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-pool-item__title {
+    font-size: 1.3rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-pool-item__price {
+    font-size: 1.2rem;
+    opacity: 0.7;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-qty {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-qty__btn {
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 0.4rem;
+    border: 0.1rem solid #d9d9d9;
+    background: #fff;
+    font-size: 1.6rem;
+    cursor: pointer;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-qty__input {
+    width: 5rem;
+    text-align: center;
+    padding: 0.6rem;
+    border-radius: 0.4rem;
+    border: 0.1rem solid #d9d9d9;
+    font-size: 1.4rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-tiers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-tier {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.4rem;
+    background: #f6f6f6;
+    font-size: 1.3rem;
+  }
+
+  .bundle-picker-{{ block.id }} .bp-tier.is-active {
+    background: var(--bp-accent);
+    color: #ffffff;
+    font-weight: 700;
+  }
 {%- endstyle -%}
 
 <div class="bundle-picker-{{ block.id }}" {{ block.shopify_attributes }}>
@@ -147,20 +253,23 @@
       {%- comment -%} Bundles managed centrally via the app's "Bundle" metaobject {%- endcomment -%}
       {%- if block.settings.show_metaobject_bundles -%}
         {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
-          {%- liquid
-            assign meta_price = ''
-            if bundle.price.value
-              assign meta_price = bundle.price.value | times: 100 | money
-            endif
-          -%}
-          {%- render 'bundle-card',
-            block_id: block.id,
-            title: bundle.title.value,
-            badge_text: bundle.badge_text.value,
-            price_text: meta_price,
-            image: bundle.image.value,
-            products: bundle.products.value
-          -%}
+          {%- if bundle.status.value == "active" -%}
+            {%- render 'bundle-card',
+              block_id: block.id,
+              handle: bundle.handle,
+              title: bundle.title.value,
+              badge_text: bundle.badge_text.value,
+              description: bundle.description.value,
+              image: bundle.image.value,
+              products: bundle.products.value,
+              bundle_type: bundle.bundle_type.value,
+              discount_type: bundle.discount_type.value,
+              discount_value: bundle.discount_value.value,
+              volume_tiers: bundle.volume_tiers.value,
+              min_items: bundle.min_items.value,
+              max_items: bundle.max_items.value
+            -%}
+          {%- endif -%}
         {%- endfor -%}
       {%- endif -%}
     </ul>

@@ -1,0 +1,89 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "10.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/10",
+              "product": { "id": "gid://shopify/Product/10" }
+            },
+            "bundleHandle": { "value": "bundle-mix-1" },
+            "bundleInstance": { "value": "instance-2" }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "12.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/11",
+              "product": { "id": "gid://shopify/Product/11" }
+            },
+            "bundleHandle": { "value": "bundle-mix-1" },
+            "bundleInstance": { "value": "instance-2" }
+          },
+          {
+            "id": "gid://shopify/CartLine/2",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "14.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/12",
+              "product": { "id": "gid://shopify/Product/12" }
+            },
+            "bundleHandle": { "value": "bundle-mix-1" },
+            "bundleInstance": { "value": "instance-2" }
+          }
+        ]
+      },
+      "discount": {
+        "discountClasses": ["PRODUCT"]
+      },
+      "shop": {
+        "bundleIndex": {
+          "jsonValue": {
+            "bundle-mix-1": {
+              "type": "mix_match",
+              "discountType": "fixed_amount",
+              "discountValue": 6,
+              "minItems": 2,
+              "maxItems": 3,
+              "productIds": [
+                "gid://shopify/Product/10",
+                "gid://shopify/Product/11",
+                "gid://shopify/Product/12",
+                "gid://shopify/Product/13"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "operations": [
+        {
+          "productDiscountsAdd": {
+            "candidates": [
+              {
+                "message": "Bundle discount",
+                "targets": [
+                  { "cartLine": { "id": "gid://shopify/CartLine/0" } },
+                  { "cartLine": { "id": "gid://shopify/CartLine/1" } },
+                  { "cartLine": { "id": "gid://shopify/CartLine/2" } }
+                ],
+                "value": {
+                  "fixedAmount": { "amount": 6.0, "appliesToEachItem": false }
+                }
+              }
+            ],
+            "selectionStrategy": "ALL"
+          }
+        }
+      ]
+    }
+  }
+}

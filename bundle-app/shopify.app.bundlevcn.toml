@@ -7,7 +7,7 @@ name = "BundleVCN"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,write_metaobjects,write_metaobject_definitions"
+scopes = "write_products,write_metaobjects,write_metaobject_definitions,write_discounts"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
@@ -44,6 +44,41 @@ type = "number_decimal"
 [metaobjects.app.bundle.fields.description]
 name = "Description"
 type = "multi_line_text_field"
+
+[metaobjects.app.bundle.fields.bundle_type]
+name = "Bundle type"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.discount_type]
+name = "Discount type"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.discount_value]
+name = "Discount value"
+type = "number_decimal"
+
+[metaobjects.app.bundle.fields.volume_tiers]
+name = "Volume tiers"
+type = "json"
+
+[metaobjects.app.bundle.fields.min_items]
+name = "Minimum items"
+type = "number_integer"
+
+[metaobjects.app.bundle.fields.max_items]
+name = "Maximum items"
+type = "number_integer"
+
+[metaobjects.app.bundle.fields.status]
+name = "Status"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.sort_order]
+name = "Sort order"
+type = "number_integer"
 
 [webhooks]
 api_version = "2026-10"

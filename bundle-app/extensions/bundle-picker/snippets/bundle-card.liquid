@@ -1,23 +1,10 @@
 {%- comment -%}
   Renders one bundle card. Accepts:
-  block_id, title, badge_text, price_text (already formatted string), image, products (array of Product), child_attrs (optional)
+  block_id, handle, title, badge_text, description, image, products,
+  bundle_type, discount_type, discount_value, volume_tiers, min_items, max_items
 {%- endcomment -%}
 
-{%- liquid
-  assign variant_ids = ''
-  for product in products
-    assign first_available = product.selected_or_first_available_variant
-    if first_available == blank
-      assign first_available = product.variants.first
-    endif
-    if first_available
-      assign variant_ids = variant_ids | append: first_available.id | append: ','
-    endif
-  endfor
-  assign variant_ids = variant_ids | remove_last: ','
--%}
-
-<li class="bp-card" {{ child_attrs }}>
+<li class="bp-card">
   {%- if badge_text != blank -%}
     <span class="bp-card__badge">{{ badge_text }}</span>
   {%- endif -%}
@@ -34,37 +21,163 @@
     {%- if title != blank -%}
       <h3 class="bp-card__title">{{ title }}</h3>
     {%- endif -%}
-
-    {%- if products.size > 0 -%}
-      <p class="bp-card__includes">
-        {{- 'Includes:' }}
-        {%- for product in products -%}
-          {{- product.title -}}{% unless forloop.last %}, {% endunless %}
-        {%- endfor -%}
-      </p>
+    {%- if description != blank -%}
+      <p class="bp-card__includes">{{ description }}</p>
     {%- endif -%}
 
-    {%- if price_text != blank -%}
-      <p class="bp-card__price">{{ price_text }}</p>
-    {%- endif -%}
+    {%- case bundle_type -%}
 
-    <bundle-add-to-cart class="bp-card__form">
-      <form
-        data-bundle-form
-        data-variant-ids="{{ variant_ids }}"
-        data-bundle-title="{{ title | escape }}"
-        data-cart-add-url="{{ routes.cart_add_url }}"
-        data-cart-url="{{ routes.cart_url }}"
-      >
-        <button type="submit" class="bp-card__submit" {% if variant_ids == blank %}disabled{% endif %}>
-          {%- if variant_ids == blank -%}
-            Sold out
-          {%- else -%}
+      {%- when 'mix_match' -%}
+        <bundle-mix-match
+          class="bp-card__form"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-discount-type="{{ discount_type }}"
+          data-discount-value="{{ discount_value }}"
+          data-min-items="{{ min_items | default: 1 }}"
+          data-max-items="{{ max_items | default: products.size }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <p class="bp-card__counter" data-bundle-counter>
+            Pick {{ min_items | default: 1 }}–{{ max_items | default: products.size }} items
+          </p>
+          <ul class="bp-pool" role="list">
+            {%- for product in products -%}
+              {%- assign variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+              <li>
+                <button
+                  type="button"
+                  class="bp-pool-item"
+                  data-variant-id="{{ variant.id }}"
+                  data-price="{{ variant.price }}"
+                  {% unless product.available %}disabled{% endunless %}
+                >
+                  {%- if product.featured_image != blank -%}
+                    {{ product.featured_image | image_url: width: 300 | image_tag: loading: 'lazy' }}
+                  {%- endif -%}
+                  <span class="bp-pool-item__title">{{ product.title }}</span>
+                  <span class="bp-pool-item__price">{{ variant.price | money }}</span>
+                </button>
+              </li>
+            {%- endfor -%}
+          </ul>
+          <p class="bp-card__price" data-bundle-price></p>
+          <button type="button" class="bp-card__submit" data-bundle-submit disabled>
             Add bundle to cart
-          {%- endif -%}
-        </button>
-        <p class="bp-card__error" data-bundle-error role="alert"></p>
-      </form>
-    </bundle-add-to-cart>
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-mix-match>
+
+      {%- when 'volume' -%}
+        {%- assign product = products.first -%}
+        {%- assign variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+        <bundle-volume
+          class="bp-card__form"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-variant-id="{{ variant.id }}"
+          data-price="{{ variant.price }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <div class="bp-qty">
+            <button type="button" class="bp-qty__btn" data-bundle-qty-decrease>−</button>
+            <input class="bp-qty__input" type="number" min="1" value="1" data-bundle-qty>
+            <button type="button" class="bp-qty__btn" data-bundle-qty-increase>+</button>
+          </div>
+          <ul class="bp-tiers" role="list">
+            {%- for tier in volume_tiers -%}
+              <li
+                class="bp-tier"
+                data-min-quantity="{{ tier.minQuantity }}"
+                data-discount-type="{{ tier.discountType }}"
+                data-value="{{ tier.value }}"
+              >
+                <span>Buy {{ tier.minQuantity }}+</span>
+                <span>
+                  {%- if tier.discountType == 'percentage' -%}
+                    {{ tier.value }}% off
+                  {%- else -%}
+                    {{ tier.value | times: 100 | money }} off
+                  {%- endif -%}
+                </span>
+              </li>
+            {%- endfor -%}
+          </ul>
+          <p class="bp-card__price" data-bundle-price>{{ variant.price | money }}</p>
+          <button
+            type="button"
+            class="bp-card__submit"
+            data-bundle-submit
+            {% unless product.available %}disabled{% endunless %}
+          >
+            {%- if product.available -%}
+              Add bundle to cart
+            {%- else -%}
+              Sold out
+            {%- endif -%}
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-volume>
+
+      {%- else -%}
+        {%- comment -%} fixed bundle: every product included {%- endcomment -%}
+        {%- assign bundle_available = true -%}
+        <bundle-add-to-cart
+          class="bp-card__form"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-discount-type="{{ discount_type }}"
+          data-discount-value="{{ discount_value }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <ul class="bp-pool" role="list" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.6rem;">
+            {%- for product in products -%}
+              {%- unless product.available -%}{%- assign bundle_available = false -%}{%- endunless -%}
+              <li>
+                {%- if product.variants.size > 1 -%}
+                  <select class="bp-card__variant-select" data-product-variants>
+                    {%- for variant in product.variants -%}
+                      <option
+                        value="{{ variant.id }}"
+                        data-price="{{ variant.price }}"
+                        {% unless variant.available %}disabled{% endunless %}
+                        {% if variant == product.selected_or_first_available_variant %}selected{% endif %}
+                      >
+                        {{ product.title }} — {{ variant.title }} ({{ variant.price | money }})
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                {%- else -%}
+                  {%- assign variant = product.selected_or_first_available_variant | default: product.variants.first -%}
+                  <span data-product-variants data-fixed-variant-id="{{ variant.id }}" data-price="{{ variant.price }}">
+                    {{ product.title }} ({{ variant.price | money }})
+                  </span>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+          <p class="bp-card__price" data-bundle-price></p>
+          <button
+            type="button"
+            class="bp-card__submit"
+            data-bundle-submit
+            {% unless bundle_available %}disabled{% endunless %}
+          >
+            {%- if bundle_available -%}
+              Add bundle to cart
+            {%- else -%}
+              Sold out
+            {%- endif -%}
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-add-to-cart>
+
+    {%- endcase -%}
   </div>
 </li>

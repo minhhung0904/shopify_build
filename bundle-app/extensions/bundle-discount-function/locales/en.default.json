@@ -1,0 +1,4 @@
+{
+  "name": "Bundle discounts",
+  "description": "Applies each bundle's configured discount at checkout."
+}
