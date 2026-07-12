@@ -1,0 +1,154 @@
+{%- comment -%}
+  Bundle DETAIL block. Place on a dedicated theme Page (e.g. /pages/bundle).
+  Renders every active bundle's full picker, hidden; the <bundle-detail>
+  element reveals the one whose handle matches ?handle=... in the URL.
+{%- endcomment -%}
+
+{%- render 'bundle-picker-css',
+  scope: block.id,
+  bg: block.settings.background_color,
+  text: block.settings.text_color,
+  accent: block.settings.accent_color,
+  card_bg: block.settings.card_background_color,
+  card_text: block.settings.card_text_color,
+  highlight: block.settings.highlight_color,
+  radius: block.settings.corner_radius,
+  pad_top: block.settings.padding_top,
+  pad_bottom: block.settings.padding_bottom,
+  columns: 1
+-%}
+
+{%- style -%}
+  .bundle-picker-{{ block.id }} .bpd-wrap { max-width: 64rem; }
+  .bundle-picker-{{ block.id }} .bpd-item { margin: 0; }
+  .bundle-picker-{{ block.id }} .bpd-empty {
+    text-align: center;
+    font-size: 1.6rem;
+    opacity: 0.75;
+    padding: 4rem 0;
+  }
+  .bundle-picker-{{ block.id }} .bpd-back {
+    display: inline-block;
+    margin-bottom: 2rem;
+    font-size: 1.4rem;
+    color: var(--bp-accent);
+    text-decoration: none;
+  }
+  .bundle-picker-{{ block.id }} .bpd-back:hover { text-decoration: underline; }
+{%- endstyle -%}
+
+<div class="bundle-picker-{{ block.id }}" {{ block.shopify_attributes }}>
+  <bundle-detail class="bp-wrap bpd-wrap" data-back-url="{{ block.settings.back_url }}">
+    {%- if block.settings.back_url != blank -%}
+      <a class="bpd-back" href="{{ block.settings.back_url }}">&larr; {{ block.settings.back_label | default: 'All bundles' }}</a>
+    {%- endif -%}
+
+    {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
+      {%- if bundle.status.value == "active" -%}
+        <ul class="bp-grid bpd-item" role="list" data-bundle-detail-handle="{{ bundle.handle }}" hidden>
+          {%- render 'bundle-card',
+            block_id: block.id,
+            handle: bundle.handle,
+            title: bundle.title.value,
+            badge_text: bundle.badge_text.value,
+            description: bundle.description.value,
+            image: bundle.image.value,
+            products: bundle.products.value,
+            reward_products: bundle.reward_products.value,
+            bundle_type: bundle.bundle_type.value,
+            discount_type: bundle.discount_type.value,
+            discount_value: bundle.discount_value.value,
+            volume_tiers: bundle.volume_tiers.value,
+            min_items: bundle.min_items.value,
+            max_items: bundle.max_items.value,
+            config: bundle.config.value
+          -%}
+        </ul>
+      {%- endif -%}
+    {%- endfor -%}
+
+    <p class="bpd-empty" data-bpd-empty hidden>{{ block.settings.not_found_text | default: 'Bundle not found.' }}</p>
+  </bundle-detail>
+</div>
+
+<script src="{{ 'bundle-picker.js' | asset_url }}" defer="defer"></script>
+
+{% schema %}
+{
+  "name": "Bundle detail",
+  "target": "section",
+  "settings": [
+    {
+      "type": "url",
+      "id": "back_url",
+      "label": "Back link URL (page listing all bundles)"
+    },
+    {
+      "type": "text",
+      "id": "back_label",
+      "label": "Back link label",
+      "default": "All bundles"
+    },
+    {
+      "type": "text",
+      "id": "not_found_text",
+      "label": "Text when no bundle matches the URL",
+      "default": "Bundle not found."
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Section background",
+      "default": "#0d0d14"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Section text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_background_color",
+      "label": "Card background",
+      "default": "#161620"
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Card text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Button / accent color",
+      "default": "#f58220"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "Highlight (tier ring, add-on band, pills)",
+      "default": "#8b5cf6"
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "min": 0, "max": 24, "step": 2, "unit": "px",
+      "label": "Card corner radius", "default": 12
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0, "max": 100, "step": 4, "unit": "px",
+      "label": "Top padding", "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0, "max": 100, "step": 4, "unit": "px",
+      "label": "Bottom padding", "default": 60
+    }
+  ]
+}
+{% endschema %}

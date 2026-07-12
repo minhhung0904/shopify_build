@@ -623,6 +623,29 @@ class BundleTiered extends HTMLElement {
   }
 }
 
+// Detail page router: reveals the bundle whose handle matches ?handle=... .
+class BundleDetail extends HTMLElement {
+  connectedCallback() {
+    const items = Array.from(this.querySelectorAll('[data-bundle-detail-handle]'));
+    const emptyEl = this.querySelector('[data-bpd-empty]');
+    if (!items.length) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const wanted = (params.get('handle') || params.get('bundle') || '').trim();
+
+    let match = wanted
+      ? items.find((el) => el.dataset.bundleDetailHandle === wanted)
+      : items[0];
+
+    items.forEach((el) => {
+      el.hidden = el !== match;
+    });
+
+    if (emptyEl) emptyEl.hidden = Boolean(match);
+  }
+}
+
+customElements.define('bundle-detail', BundleDetail);
 customElements.define('bundle-add-to-cart', BundleFixed);
 customElements.define('bundle-mix-match', BundleMixMatch);
 customElements.define('bundle-volume', BundleVolume);

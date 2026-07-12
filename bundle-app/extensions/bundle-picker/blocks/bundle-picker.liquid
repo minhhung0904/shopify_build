@@ -1,3 +1,8 @@
+{%- comment -%}
+  Bundle GRID block. Shows each bundle as a compact product-style card
+  (image + title + price + Save badge). Fixed bundles quick-add to cart;
+  other types link to the bundle detail page (?handle=...).
+{%- endcomment -%}
 {%- style -%}
   .bundle-picker-{{ block.id }} {
     --bp-bg: {{ block.settings.background_color }};
@@ -5,510 +10,144 @@
     --bp-accent: {{ block.settings.accent_color }};
     --bp-card-bg: {{ block.settings.card_background_color }};
     --bp-card-text: {{ block.settings.card_text_color }};
-    --bp-highlight: {{ block.settings.highlight_color }};
     --bp-radius: {{ block.settings.corner_radius }}px;
+    --bp-border: color-mix(in srgb, var(--bp-card-text) 14%, transparent);
+    --bp-muted: color-mix(in srgb, var(--bp-card-text) 55%, transparent);
     padding: {{ block.settings.padding_top }}px 1.5rem {{ block.settings.padding_bottom }}px;
     background: var(--bp-bg);
     color: var(--bp-text);
   }
 
-  .bundle-picker-{{ block.id }} .bp-wrap {
-    max-width: 120rem;
-    margin: 0 auto;
-  }
+  .bundle-picker-{{ block.id }} .bp-wrap { max-width: 120rem; margin: 0 auto; }
 
   .bundle-picker-{{ block.id }} .bp-heading {
     text-align: center;
-    font-size: 2.8rem;
+    font-size: clamp(2.2rem, 3vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
     line-height: 1.2;
     margin: 0 0 3rem;
   }
 
-  .bundle-picker-{{ block.id }} .bp-grid {
+  .bundle-picker-{{ block.id }} .bpc-grid {
     display: grid;
-    grid-template-columns: repeat(1, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 2rem;
     list-style: none;
     padding: 0;
     margin: 0;
   }
-
-  @media screen and (min-width: 600px) {
-    .bundle-picker-{{ block.id }} .bp-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
   @media screen and (min-width: 990px) {
-    .bundle-picker-{{ block.id }} .bp-grid {
+    .bundle-picker-{{ block.id }} .bpc-grid {
       grid-template-columns: repeat({{ block.settings.columns_desktop }}, 1fr);
     }
   }
 
-  .bundle-picker-{{ block.id }} .bp-card {
-    position: relative;
+  .bundle-picker-{{ block.id }} .bpc-card {
     display: flex;
     flex-direction: column;
     background: var(--bp-card-bg);
     color: var(--bp-card-text);
+    border: 1px solid var(--bp-border);
     border-radius: var(--bp-radius);
-    box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.28);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
     overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .bundle-picker-{{ block.id }} .bpc-card:hover {
+    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 18px 42px rgba(16, 24, 40, 0.12);
+    transform: translateY(-2px);
   }
 
-  .bundle-picker-{{ block.id }} .bp-card__badge {
+  .bundle-picker-{{ block.id }} .bpc-card__link {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .bundle-picker-{{ block.id }} .bpc-card__media {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background: color-mix(in srgb, var(--bp-card-text) 8%, transparent);
+  }
+  .bundle-picker-{{ block.id }} .bpc-card__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .bundle-picker-{{ block.id }} .bpc-card__badge {
     position: absolute;
-    top: 1.2rem;
-    left: 1.2rem;
+    top: 1rem;
+    left: 1rem;
     z-index: 1;
     padding: 0.4rem 1rem;
     border-radius: 0.6rem;
     background: var(--bp-accent);
     color: #ffffff;
-    font-size: 1.2rem;
-    font-weight: 700;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__image {
-    aspect-ratio: 1 / 1;
-    background: color-mix(in srgb, var(--bp-card-text) 8%, transparent);
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__image img,
-  .bundle-picker-{{ block.id }} .bp-card__image svg {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__body {
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    flex-grow: 1;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__title {
-    margin: 0;
-    font-size: 1.9rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__includes {
-    margin: 0;
-    font-size: 1.3rem;
-    opacity: 0.7;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__price {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin: 0;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__form {
-    margin-top: auto;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__submit {
-    width: 100%;
-    padding: 1.2rem;
-    border: none;
-    border-radius: 0.6rem;
-    background: var(--bp-accent);
-    color: #ffffff;
-    font-size: 1.5rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__submit:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__error {
-    color: #c31d1d;
-    font-size: 1.3rem;
-    margin: 0.6rem 0 0;
-    display: none;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__error.is-visible {
-    display: block;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__variant-select {
-    width: 100%;
-    padding: 0.6rem;
-    border-radius: 0.4rem;
-    border: 0.1rem solid var(--bp-border);
-    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
-    color: var(--bp-card-text);
-    font-size: 1.3rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__counter {
-    font-size: 1.3rem;
-    opacity: 0.7;
-    margin: 0;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-pool {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-    gap: 1rem;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-pool-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 0.8rem;
-    border: 0.2rem solid var(--bp-border);
-    border-radius: 0.6rem;
-    background: none;
-    cursor: pointer;
-    text-align: left;
-    font: inherit;
-    color: inherit;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-pool-item.is-selected {
-    border-color: var(--bp-accent);
-  }
-
-  .bundle-picker-{{ block.id }} .bp-pool-item img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 0.4rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-pool-item__title {
-    font-size: 1.3rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-pool-item__price {
-    font-size: 1.2rem;
-    opacity: 0.7;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-qty {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-qty__btn {
-    width: 3.2rem;
-    height: 3.2rem;
-    border-radius: 0.4rem;
-    border: 0.1rem solid var(--bp-border);
-    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
-    color: var(--bp-card-text);
-    font-size: 1.6rem;
-    cursor: pointer;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-qty__input {
-    width: 5rem;
-    text-align: center;
-    padding: 0.6rem;
-    border-radius: 0.4rem;
-    border: 0.1rem solid var(--bp-border);
-    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
-    color: var(--bp-card-text);
-    font-size: 1.4rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-tiers {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-tier {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.4rem;
-    background: color-mix(in srgb, var(--bp-card-text) 7%, transparent);
-    font-size: 1.3rem;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-tier.is-active {
-    background: var(--bp-accent);
-    color: #ffffff;
-    font-weight: 700;
-  }
-
-  /* ============================================================
-     Modern styling — later rules override the base above so every
-     bundle type gets the upgraded look.
-     ============================================================ */
-  .bundle-picker-{{ block.id }} {
-    --bp-accent-soft: color-mix(in srgb, var(--bp-accent) 18%, var(--bp-card-bg));
-    --bp-accent-ring: color-mix(in srgb, var(--bp-accent) 45%, var(--bp-card-bg));
-    --bp-border: color-mix(in srgb, var(--bp-card-text) 16%, transparent);
-    --bp-muted: color-mix(in srgb, var(--bp-card-text) 55%, transparent);
-  }
-
-  .bundle-picker-{{ block.id }} .bp-heading {
-    font-size: clamp(2.2rem, 3vw, 3.2rem);
+    font-size: 1.15rem;
     font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card {
-    border: 1px solid var(--bp-border);
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
-  }
-  .bundle-picker-{{ block.id }} .bp-card:hover {
-    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 18px 42px rgba(16, 24, 40, 0.1);
-    transform: translateY(-2px);
-  }
-
-  .bundle-picker-{{ block.id }} .bp-card__badge {
-    background: var(--bp-accent);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     letter-spacing: 0.03em;
     text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   }
 
-  .bundle-picker-{{ block.id }} .bp-card__title {
+  .bundle-picker-{{ block.id }} .bpc-card__info {
+    padding: 1.4rem 1.6rem 0.6rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex: 1 1 auto;
+  }
+  .bundle-picker-{{ block.id }} .bpc-card__title {
+    margin: 0;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.01em;
   }
+  .bundle-picker-{{ block.id }} .bpc-card__price {
+    margin: 0;
+    font-size: 1.6rem;
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .bundle-picker-{{ block.id }} .bpc-card__from { font-size: 1.2rem; color: var(--bp-muted); font-weight: 600; }
+  .bundle-picker-{{ block.id }} .bpc-card__now { color: var(--bp-accent); font-weight: 800; }
+  .bundle-picker-{{ block.id }} .bpc-card__was { color: var(--bp-muted); font-weight: 500; font-size: 1.35rem; }
 
-  .bundle-picker-{{ block.id }} .bp-card__submit {
-    border-radius: 999px;
-    padding: 1.3rem 1.6rem;
-    letter-spacing: 0.01em;
+  .bundle-picker-{{ block.id }} .bpc-card__form { margin: 0 1.6rem 1.6rem; }
+  .bundle-picker-{{ block.id }} a.bpc-card__cta { margin: 0 1.6rem 1.6rem; }
+
+  .bundle-picker-{{ block.id }} .bpc-card__cta {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1.2rem 1.4rem;
+    border: none;
+    border-radius: 0.8rem;
+    background: var(--bp-accent);
+    color: #ffffff;
+    font-size: 1.45rem;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
     transition: filter 0.15s ease, transform 0.05s ease;
   }
-  .bundle-picker-{{ block.id }} .bp-card__submit:hover:not(:disabled) {
-    filter: brightness(0.94);
-  }
-  .bundle-picker-{{ block.id }} .bp-card__submit:active:not(:disabled) {
-    transform: translateY(1px);
-  }
+  .bundle-picker-{{ block.id }} .bpc-card__form .bpc-card__cta { margin: 0; }
+  .bundle-picker-{{ block.id }} .bpc-card__cta:hover:not(:disabled) { filter: brightness(0.94); }
+  .bundle-picker-{{ block.id }} .bpc-card__cta:active:not(:disabled) { transform: translateY(1px); }
+  .bundle-picker-{{ block.id }} .bpc-card__cta:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* mix & match / variant pool items */
-  .bundle-picker-{{ block.id }} .bp-pool-item {
-    border-width: 1.5px;
-    border-color: var(--bp-border);
-    border-radius: 1rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-  }
-  .bundle-picker-{{ block.id }} .bp-pool-item:hover:not(:disabled) {
-    border-color: var(--bp-accent-ring);
-    transform: translateY(-1px);
-  }
-  .bundle-picker-{{ block.id }} .bp-pool-item.is-selected {
-    border-color: var(--bp-accent);
-    box-shadow: 0 0 0 3px var(--bp-accent-soft);
-  }
-
-  .bundle-picker-{{ block.id }} .bp-tier {
-    border-radius: 0.8rem;
-  }
-
-  /* ---------- Tiered (Bundle & Save) — full-width offer rows ---------- */
-  .bundle-picker-{{ block.id }} .bp-tierlist {
-    list-style: none;
-    margin: 0 0 1.6rem;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.4rem;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2 {
-    --bp-blue: var(--bp-highlight);
-    position: relative;
-    border-radius: 1.4rem;
-    background: color-mix(in srgb, var(--bp-card-text) 7%, transparent);
-    color: var(--bp-card-text);
-    border: 1px solid var(--bp-border);
-    overflow: hidden;
-    box-shadow: 0 0 0 2px transparent;
-    transition: box-shadow 0.15s ease;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2.is-selected {
-    box-shadow: 0 0 0 3px var(--bp-blue);
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__head {
-    display: flex;
-    align-items: center;
-    gap: 1.4rem;
-    padding: 1.8rem 2rem;
-    cursor: pointer;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__radio {
-    width: 2.2rem;
-    height: 2.2rem;
-    flex: 0 0 auto;
-    accent-color: var(--bp-blue);
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__title {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    font-size: 1.9rem;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__savepill {
+  .bundle-picker-{{ block.id }} .bpc-card__error {
+    color: #ff6b6b;
     font-size: 1.2rem;
-    font-weight: 800;
-    color: #ffffff;
-    background: var(--bp-blue);
-    padding: 0.3rem 0.9rem;
-    border-radius: 999px;
-    white-space: nowrap;
+    margin: 0.5rem 1.6rem 0;
+    display: none;
   }
-  .bundle-picker-{{ block.id }} .bp-tier2__sub {
-    font-size: 1.35rem;
-    font-weight: 600;
-    color: var(--bp-muted);
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__prices {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    text-align: right;
-    flex: 0 0 auto;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__now {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__was {
-    font-size: 1.4rem;
-    color: var(--bp-muted);
-  }
-  .bundle-picker-{{ block.id }} .bp-tier2__ribbon {
-    position: absolute;
-    top: 0;
-    right: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #ffffff;
-    background: var(--bp-blue);
-    padding: 0.5rem 1.1rem;
-    border-radius: 0 1.4rem 0 1.2rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-  }
-
-  /* expanded body: variant pickers on the tier, add-ons in a blue band */
-  .bundle-picker-{{ block.id }} .bp-tier2__body {
-    padding: 0 2rem 1.8rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.9rem;
-  }
-  .bundle-picker-{{ block.id }} .bp-vlabel {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--bp-muted);
-  }
-  .bundle-picker-{{ block.id }} .bp-vslot {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  .bundle-picker-{{ block.id }} .bp-vslot__img {
-    width: 4.4rem;
-    height: 4.4rem;
-    flex: 0 0 auto;
-    border-radius: 0.6rem;
-    object-fit: cover;
-    background: color-mix(in srgb, var(--bp-card-text) 12%, transparent);
-  }
-  .bundle-picker-{{ block.id }} .bp-vslot__img:not([src]) {
-    visibility: hidden;
-  }
-  .bundle-picker-{{ block.id }} .bp-vslot__select {
-    flex: 1 1 auto;
-    padding: 1rem 1.1rem;
-    border-radius: 0.8rem;
-    border: 1px solid var(--bp-border);
-    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
-    color: var(--bp-card-text);
-    font-size: 1.4rem;
-    font-weight: 600;
-  }
-
-  .bundle-picker-{{ block.id }} .bp-addons {
-    margin: 1rem -2rem -1.8rem;
-    background: var(--bp-highlight);
-    color: #ffffff;
-  }
-  .bundle-picker-{{ block.id }} .bp-addon {
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    padding: 1.2rem 2rem;
-    cursor: pointer;
-    border-top: 1px solid rgba(255, 255, 255, 0.16);
-  }
-  .bundle-picker-{{ block.id }} .bp-addon:first-child {
-    border-top: 0;
-  }
-  .bundle-picker-{{ block.id }} .bp-addon__cb {
-    width: 1.9rem;
-    height: 1.9rem;
-    flex: 0 0 auto;
-    accent-color: #ffffff;
-  }
-  .bundle-picker-{{ block.id }} .bp-addon__img {
-    width: 3.6rem;
-    height: 3.6rem;
-    flex: 0 0 auto;
-    border-radius: 0.5rem;
-    object-fit: cover;
-    background: rgba(255, 255, 255, 0.15);
-  }
-  .bundle-picker-{{ block.id }} .bp-addon__name {
-    flex: 1 1 auto;
-    font-size: 1.4rem;
-    font-weight: 700;
-    min-width: 0;
-  }
-  .bundle-picker-{{ block.id }} .bp-addon__prices {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    text-align: right;
-    flex: 0 0 auto;
-  }
-  .bundle-picker-{{ block.id }} .bp-addon__now {
-    font-size: 1.5rem;
-    font-weight: 800;
-  }
-  .bundle-picker-{{ block.id }} .bp-addon__was {
-    font-size: 1.2rem;
-    opacity: 0.72;
-  }
+  .bundle-picker-{{ block.id }} .bpc-card__error.is-visible { display: block; }
 {%- endstyle -%}
 
 <div class="bundle-picker-{{ block.id }}" {{ block.shopify_attributes }}>
@@ -517,31 +156,26 @@
       <h2 class="bp-heading">{{ block.settings.heading }}</h2>
     {%- endif -%}
 
-    <ul class="bp-grid" role="list">
-      {%- comment -%} Bundles managed centrally via the app's "Bundle" metaobject {%- endcomment -%}
-      {%- if block.settings.show_metaobject_bundles -%}
-        {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
-          {%- if bundle.status.value == "active" -%}
-            {%- render 'bundle-card',
-              block_id: block.id,
-              handle: bundle.handle,
-              title: bundle.title.value,
-              badge_text: bundle.badge_text.value,
-              description: bundle.description.value,
-              image: bundle.image.value,
-              products: bundle.products.value,
-              reward_products: bundle.reward_products.value,
-              bundle_type: bundle.bundle_type.value,
-              discount_type: bundle.discount_type.value,
-              discount_value: bundle.discount_value.value,
-              volume_tiers: bundle.volume_tiers.value,
-              min_items: bundle.min_items.value,
-              max_items: bundle.max_items.value,
-              config: bundle.config.value
-            -%}
-          {%- endif -%}
-        {%- endfor -%}
-      {%- endif -%}
+    <ul class="bpc-grid" role="list">
+      {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
+        {%- if bundle.status.value == "active" -%}
+          {%- render 'bundle-card-compact',
+            block_id: block.id,
+            handle: bundle.handle,
+            title: bundle.title.value,
+            badge_text: bundle.badge_text.value,
+            image: bundle.image.value,
+            products: bundle.products.value,
+            reward_products: bundle.reward_products.value,
+            bundle_type: bundle.bundle_type.value,
+            discount_type: bundle.discount_type.value,
+            discount_value: bundle.discount_value.value,
+            volume_tiers: bundle.volume_tiers.value,
+            config: bundle.config.value,
+            detail_url: block.settings.detail_url
+          -%}
+        {%- endif -%}
+      {%- endfor -%}
     </ul>
   </div>
 </div>
@@ -556,14 +190,14 @@
     {
       "type": "text",
       "id": "heading",
-      "default": "Build your bundle",
+      "default": "Bundles",
       "label": "Heading"
     },
     {
-      "type": "checkbox",
-      "id": "show_metaobject_bundles",
-      "label": "Also show bundles managed in the app",
-      "default": true
+      "type": "url",
+      "id": "detail_url",
+      "label": "Bundle detail page",
+      "info": "The page where you placed the 'Bundle detail' block, e.g. /pages/bundle"
     },
     {
       "type": "select",
@@ -573,74 +207,56 @@
         { "value": "3", "label": "3" },
         { "value": "4", "label": "4" }
       ],
-      "default": "3",
+      "default": "4",
       "label": "Columns on desktop"
     },
     {
       "type": "color",
       "id": "background_color",
       "label": "Section background",
-      "default": "#0d0d14"
+      "default": "#ffffff"
     },
     {
       "type": "color",
       "id": "text_color",
       "label": "Section text (heading)",
-      "default": "#ffffff"
+      "default": "#14110c"
     },
     {
       "type": "color",
       "id": "card_background_color",
       "label": "Card background",
-      "default": "#161620"
+      "default": "#ffffff"
     },
     {
       "type": "color",
       "id": "card_text_color",
       "label": "Card text",
-      "default": "#ffffff"
+      "default": "#14110c"
     },
     {
       "type": "color",
       "id": "accent_color",
-      "label": "Button / accent color",
+      "label": "Button / price / accent color",
       "default": "#f58220"
-    },
-    {
-      "type": "color",
-      "id": "highlight_color",
-      "label": "Highlight (tier ring, add-on band, pills)",
-      "default": "#8b5cf6"
     },
     {
       "type": "range",
       "id": "corner_radius",
-      "min": 0,
-      "max": 24,
-      "step": 2,
-      "unit": "px",
-      "label": "Card corner radius",
-      "default": 12
+      "min": 0, "max": 24, "step": 2, "unit": "px",
+      "label": "Card corner radius", "default": 14
     },
     {
       "type": "range",
       "id": "padding_top",
-      "min": 0,
-      "max": 100,
-      "step": 4,
-      "unit": "px",
-      "label": "Top padding",
-      "default": 60
+      "min": 0, "max": 100, "step": 4, "unit": "px",
+      "label": "Top padding", "default": 60
     },
     {
       "type": "range",
       "id": "padding_bottom",
-      "min": 0,
-      "max": 100,
-      "step": 4,
-      "unit": "px",
-      "label": "Bottom padding",
-      "default": 60
+      "min": 0, "max": 100, "step": 4, "unit": "px",
+      "label": "Bottom padding", "default": 60
     }
   ]
 }
