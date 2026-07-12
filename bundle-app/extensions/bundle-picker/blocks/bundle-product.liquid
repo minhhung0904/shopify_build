@@ -5,10 +5,16 @@
   Products without a matching bundle render nothing (normal product page).
 {%- endcomment -%}
 
+{%- comment -%}
+  App-owned metaobject product_reference fields DON'T resolve on the storefront,
+  so we match on the product HANDLES the app stores in the config JSON
+  (config.productHandles). The current page product must be one of them.
+{%- endcomment -%}
 {%- assign matched = false -%}
 {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
   {%- if bundle.status.value == "active" and matched == false -%}
-    {%- if bundle.products.value.first.id == product.id -%}
+    {%- assign cfg = bundle.config.value -%}
+    {%- if cfg.productHandles contains product.handle -%}
       {%- assign matched = bundle -%}
     {%- endif -%}
   {%- endif -%}
@@ -50,6 +56,7 @@
         block_id: block.id,
         handle: matched.handle,
         title: matched.title.value,
+        main_product: product,
         products: matched.products.value,
         reward_products: matched.reward_products.value,
         bundle_type: matched.bundle_type.value,
@@ -65,12 +72,23 @@
 
   <script src="{{ 'bundle-picker.js' | asset_url }}" defer="defer"></script>
 {%- elsif request.design_mode -%}
-  {%- comment -%} Editor-only hint so the block isn't invisibly empty {%- endcomment -%}
-  <div {{ block.shopify_attributes }} style="padding:1.6rem;border:1px dashed #c9c9c9;border-radius:8px;color:#6b7280;font-size:1.3rem;text-align:center;">
-    <strong>Bundle on product</strong><br>
-    No active bundle has <em>this</em> product as its main product
-    (bundle&rsquo;s first product = product ID {{ product.id }}).<br>
-    Preview the bundle&rsquo;s main product to see the &ldquo;Bundle &amp; Save&rdquo; picker here.
+  {%- comment -%} Editor-only DEBUG so the mismatch is visible {%- endcomment -%}
+  <div {{ block.shopify_attributes }} style="padding:1.6rem;border:1px dashed #c9c9c9;border-radius:8px;color:#374151;font-size:1.3rem;line-height:1.6;">
+    <strong>Bundle on product — debug (editor only)</strong><br>
+    Current product.handle = <code>{{ product.handle }}</code><br>
+    No active bundle lists this product handle in config.productHandles. Bundles found:
+    <ul style="margin:0.6rem 0 0;padding-left:1.6rem;">
+      {%- for b in shop.metaobjects["$app:bundle"].values -%}
+        {%- assign dbg_cfg = b.config.value -%}
+        <li>
+          &ldquo;{{ b.title.value }}&rdquo; · status=<code>{{ b.status.value }}</code>
+          · productHandles=<code>{{ dbg_cfg.productHandles | join: ', ' }}</code>
+          {%- if dbg_cfg.productHandles contains product.handle %} ← MATCH{% endif -%}
+        </li>
+      {%- else -%}
+        <li>(no bundles returned by shop.metaobjects["$app:bundle"])</li>
+      {%- endfor -%}
+    </ul>
   </div>
 {%- endif -%}
 

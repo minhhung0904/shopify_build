@@ -59,7 +59,7 @@
         </bundle-mix-match>
 
       {%- when 'variant' -%}
-        {%- assign product = products.first -%}
+        {%- assign product = main_product | default: products.first -%}
         <bundle-mix-match
           class="bp-card__form"
           data-bundle-handle="{{ handle }}"
@@ -104,7 +104,7 @@
         </bundle-mix-match>
 
       {%- when 'multipack' -%}
-        {%- assign product = products.first -%}
+        {%- assign product = main_product | default: products.first -%}
         {%- assign variant = product.selected_or_first_available_variant | default: product.variants.first -%}
         {%- assign pack_size = config.packSize | default: 1 -%}
         <bundle-multipack
@@ -200,7 +200,7 @@
         </bundle-bogo>
 
       {%- when 'volume' -%}
-        {%- assign product = products.first -%}
+        {%- assign product = main_product | default: products.first -%}
         {%- assign variant = product.selected_or_first_available_variant | default: product.variants.first -%}
         <bundle-volume
           class="bp-card__form"
@@ -253,7 +253,7 @@
         </bundle-volume>
 
       {%- when 'tiered' -%}
-        {%- assign product = products.first -%}
+        {%- assign product = main_product | default: products.first -%}
         <bundle-tiered
           class="bp-card__form bp-tiered"
           data-bundle-handle="{{ handle }}"
@@ -273,10 +273,16 @@
           </script>
           <script type="application/json" data-bp-addons>
             [
-              {%- for ap in reward_products -%}
-                {%- assign av = ap.selected_or_first_available_variant | default: ap.variants.first -%}
-                {%- assign aimg = av.featured_image | default: ap.featured_image -%}
-                {"id":{{ av.id }},"title":{{ ap.title | json }},"price":{{ av.price }},"available":{{ ap.available }},"image":{{ aimg | image_url: width: 120 | json }}}{%- unless forloop.last -%},{%- endunless -%}
+              {%- comment -%} Add-ons resolved by handle (references don't resolve on storefront) {%- endcomment -%}
+              {%- assign addon_sep = '' -%}
+              {%- for h in config.addOnHandles -%}
+                {%- assign ap = all_products[h] -%}
+                {%- if ap != blank -%}
+                  {%- assign av = ap.selected_or_first_available_variant | default: ap.variants.first -%}
+                  {%- assign aimg = av.featured_image | default: ap.featured_image -%}
+                  {{ addon_sep }}{"id":{{ av.id }},"title":{{ ap.title | json }},"price":{{ av.price }},"available":{{ ap.available }},"image":{{ aimg | image_url: width: 120 | json }}}
+                  {%- assign addon_sep = ',' -%}
+                {%- endif -%}
               {%- endfor -%}
             ]
           </script>

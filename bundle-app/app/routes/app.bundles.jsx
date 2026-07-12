@@ -136,12 +136,12 @@ const BUNDLE_FIELDS = `#graphql
     config: field(key: "config") { value }
     products: field(key: "products") {
       references(first: 20) {
-        nodes { ... on Product { id title } }
+        nodes { ... on Product { id title handle } }
       }
     }
     rewardProducts: field(key: "reward_products") {
       references(first: 20) {
-        nodes { ... on Product { id title } }
+        nodes { ... on Product { id title handle } }
       }
     }
   }
@@ -539,6 +539,7 @@ export default function Bundles() {
       selectedProducts: (bundle.products?.references?.nodes || []).map((p) => ({
         id: p.id,
         title: p.title,
+        handle: p.handle,
       })),
       volumeTiers,
       packSize: config.packSize != null ? String(config.packSize) : "3",
@@ -553,7 +554,7 @@ export default function Bundles() {
             ? String(config.addOnDiscountValue)
             : "100",
       rewardProducts: (bundle.rewardProducts?.references?.nodes || []).map(
-        (p) => ({ id: p.id, title: p.title }),
+        (p) => ({ id: p.id, title: p.title, handle: p.handle }),
       ),
       tieredTiers:
         Array.isArray(config.tiers) && config.tiers.length
@@ -667,11 +668,19 @@ export default function Bundles() {
     }));
 
   const buildConfig = () => {
+    // Product handles are stored here (scalar JSON) because app-owned metaobject
+    // product_reference fields DON'T resolve on the storefront — the theme reads
+    // these handles to match the product page and resolve add-ons via all_products.
+    const base = {
+      productHandles: form.selectedProducts.map((p) => p.handle).filter(Boolean),
+      addOnHandles: form.rewardProducts.map((p) => p.handle).filter(Boolean),
+    };
     if (form.bundleType === "multipack") {
-      return { packSize: Number(form.packSize) || 1 };
+      return { ...base, packSize: Number(form.packSize) || 1 };
     }
     if (form.bundleType === "bogo") {
       return {
+        ...base,
         buyQuantity: Number(form.buyQuantity) || 1,
         getQuantity: Number(form.getQuantity) || 1,
         rewardDiscountType: form.rewardDiscountType,
@@ -680,6 +689,7 @@ export default function Bundles() {
     }
     if (form.bundleType === "tiered") {
       return {
+        ...base,
         tiers: form.tieredTiers.map((t) => ({
           title: t.title,
           quantity: Number(t.quantity) || 1,
@@ -691,7 +701,7 @@ export default function Bundles() {
         addOnDiscountValue: Number(form.rewardDiscountValue) || 0,
       };
     }
-    return {};
+    return base;
   };
 
   const saveBundle = () => {
