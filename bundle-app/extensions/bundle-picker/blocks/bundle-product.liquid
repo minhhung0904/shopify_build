@@ -64,6 +64,14 @@
   </div>
 
   <script src="{{ 'bundle-picker.js' | asset_url }}" defer="defer"></script>
+{%- elsif request.design_mode -%}
+  {%- comment -%} Editor-only hint so the block isn't invisibly empty {%- endcomment -%}
+  <div {{ block.shopify_attributes }} style="padding:1.6rem;border:1px dashed #c9c9c9;border-radius:8px;color:#6b7280;font-size:1.3rem;text-align:center;">
+    <strong>Bundle on product</strong><br>
+    No active bundle has <em>this</em> product as its main product
+    (bundle&rsquo;s first product = product ID {{ product.id }}).<br>
+    Preview the bundle&rsquo;s main product to see the &ldquo;Bundle &amp; Save&rdquo; picker here.
+  </div>
 {%- endif -%}
 
 {% schema %}
