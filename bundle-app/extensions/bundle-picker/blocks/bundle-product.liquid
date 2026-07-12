@@ -1,0 +1,136 @@
+{%- comment -%}
+  Bundle on the PRODUCT PAGE (Kaching-style). Place this block on the product
+  template. It shows the "Bundle & Save" picker only when the current product
+  is the main product of an active bundle (bundle.products.first == product).
+  Products without a matching bundle render nothing (normal product page).
+{%- endcomment -%}
+
+{%- assign matched = false -%}
+{%- for bundle in shop.metaobjects["$app:bundle"].values -%}
+  {%- if bundle.status.value == "active" and matched == false -%}
+    {%- if bundle.products.value.first.id == product.id -%}
+      {%- assign matched = bundle -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- if matched -%}
+  {%- render 'bundle-picker-css',
+    scope: block.id,
+    bg: block.settings.background_color,
+    text: block.settings.text_color,
+    accent: block.settings.accent_color,
+    card_bg: block.settings.card_background_color,
+    card_text: block.settings.card_text_color,
+    highlight: block.settings.highlight_color,
+    radius: block.settings.corner_radius,
+    pad_top: block.settings.padding_top,
+    pad_bottom: block.settings.padding_bottom,
+    columns: 1
+  -%}
+
+  {%- style -%}
+    .bundle-picker-{{ block.id }}.bpp { padding-left: 0; padding-right: 0; }
+    .bundle-picker-{{ block.id }} .bpp-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      margin: 0 0 1.4rem;
+    }
+    .bundle-picker-{{ block.id }} .bpp-inner { max-width: 56rem; }
+  {%- endstyle -%}
+
+  <div class="bundle-picker-{{ block.id }} bpp" {{ block.shopify_attributes }}>
+    <div class="bpp-inner">
+      {%- if block.settings.heading != blank -%}
+        <h2 class="bpp-title">{{ block.settings.heading }}</h2>
+      {%- endif -%}
+      {%- render 'bundle-form',
+        block_id: block.id,
+        handle: matched.handle,
+        title: matched.title.value,
+        products: matched.products.value,
+        reward_products: matched.reward_products.value,
+        bundle_type: matched.bundle_type.value,
+        discount_type: matched.discount_type.value,
+        discount_value: matched.discount_value.value,
+        volume_tiers: matched.volume_tiers.value,
+        min_items: matched.min_items.value,
+        max_items: matched.max_items.value,
+        config: matched.config.value
+      -%}
+    </div>
+  </div>
+
+  <script src="{{ 'bundle-picker.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Bundle on product",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "BUNDLE & SAVE"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#14110c"
+    },
+    {
+      "type": "color",
+      "id": "card_background_color",
+      "label": "Panel background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Panel text",
+      "default": "#14110c"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Button / accent color",
+      "default": "#f58220"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "Highlight (selected tier, add-on band, pills)",
+      "default": "#1d63e9"
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "min": 0, "max": 24, "step": 2, "unit": "px",
+      "label": "Corner radius", "default": 12
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0, "max": 100, "step": 4, "unit": "px",
+      "label": "Top padding", "default": 16
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0, "max": 100, "step": 4, "unit": "px",
+      "label": "Bottom padding", "default": 16
+    }
+  ]
+}
+{% endschema %}

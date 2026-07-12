@@ -1,31 +1,9 @@
 {%- comment -%}
-  Renders one bundle card. Accepts:
-  block_id, handle, title, badge_text, description, image, products,
-  reward_products, bundle_type, discount_type, discount_value, volume_tiers,
-  min_items, max_items, config
+  Type-aware bundle FORM (the buy UI), rendered by the bundle-product block
+  on the product page. Accepts:
+  block_id, handle, title, products, reward_products, bundle_type,
+  discount_type, discount_value, volume_tiers, min_items, max_items, config
 {%- endcomment -%}
-
-<li class="bp-card">
-  {%- if badge_text != blank -%}
-    <span class="bp-card__badge">{{ badge_text }}</span>
-  {%- endif -%}
-
-  <div class="bp-card__image">
-    {%- if image != blank -%}
-      {{ image | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,700' }}
-    {%- elsif products.first.featured_image != blank -%}
-      {{ products.first.featured_image | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,700' }}
-    {%- endif -%}
-  </div>
-
-  <div class="bp-card__body">
-    {%- if title != blank -%}
-      <h3 class="bp-card__title">{{ title }}</h3>
-    {%- endif -%}
-    {%- if description != blank -%}
-      <p class="bp-card__includes">{{ description }}</p>
-    {%- endif -%}
-
     {%- case bundle_type -%}
 
       {%- when 'mix_match', 'infinite' -%}
@@ -407,5 +385,3 @@
         </bundle-add-to-cart>
 
     {%- endcase -%}
-  </div>
-</li>
