@@ -3,6 +3,9 @@
     --bp-bg: {{ block.settings.background_color }};
     --bp-text: {{ block.settings.text_color }};
     --bp-accent: {{ block.settings.accent_color }};
+    --bp-card-bg: {{ block.settings.card_background_color }};
+    --bp-card-text: {{ block.settings.card_text_color }};
+    --bp-highlight: {{ block.settings.highlight_color }};
     --bp-radius: {{ block.settings.corner_radius }}px;
     padding: {{ block.settings.padding_top }}px 1.5rem {{ block.settings.padding_bottom }}px;
     background: var(--bp-bg);
@@ -46,10 +49,10 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
-    color: #1a1a1a;
+    background: var(--bp-card-bg);
+    color: var(--bp-card-text);
     border-radius: var(--bp-radius);
-    box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.28);
     overflow: hidden;
   }
 
@@ -68,7 +71,7 @@
 
   .bundle-picker-{{ block.id }} .bp-card__image {
     aspect-ratio: 1 / 1;
-    background: #f3f3f3;
+    background: color-mix(in srgb, var(--bp-card-text) 8%, transparent);
   }
 
   .bundle-picker-{{ block.id }} .bp-card__image img,
@@ -140,7 +143,9 @@
     width: 100%;
     padding: 0.6rem;
     border-radius: 0.4rem;
-    border: 0.1rem solid #d9d9d9;
+    border: 0.1rem solid var(--bp-border);
+    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
+    color: var(--bp-card-text);
     font-size: 1.3rem;
   }
 
@@ -164,7 +169,7 @@
     flex-direction: column;
     gap: 0.4rem;
     padding: 0.8rem;
-    border: 0.2rem solid #e3e3e3;
+    border: 0.2rem solid var(--bp-border);
     border-radius: 0.6rem;
     background: none;
     cursor: pointer;
@@ -203,8 +208,9 @@
     width: 3.2rem;
     height: 3.2rem;
     border-radius: 0.4rem;
-    border: 0.1rem solid #d9d9d9;
-    background: #fff;
+    border: 0.1rem solid var(--bp-border);
+    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
+    color: var(--bp-card-text);
     font-size: 1.6rem;
     cursor: pointer;
   }
@@ -214,7 +220,9 @@
     text-align: center;
     padding: 0.6rem;
     border-radius: 0.4rem;
-    border: 0.1rem solid #d9d9d9;
+    border: 0.1rem solid var(--bp-border);
+    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
+    color: var(--bp-card-text);
     font-size: 1.4rem;
   }
 
@@ -232,7 +240,7 @@
     justify-content: space-between;
     padding: 0.6rem 0.8rem;
     border-radius: 0.4rem;
-    background: #f6f6f6;
+    background: color-mix(in srgb, var(--bp-card-text) 7%, transparent);
     font-size: 1.3rem;
   }
 
@@ -247,10 +255,10 @@
      bundle type gets the upgraded look.
      ============================================================ */
   .bundle-picker-{{ block.id }} {
-    --bp-accent-soft: color-mix(in srgb, var(--bp-accent) 12%, #ffffff);
-    --bp-accent-ring: color-mix(in srgb, var(--bp-accent) 40%, #ffffff);
-    --bp-border: #e6e6e6;
-    --bp-muted: #6b7280;
+    --bp-accent-soft: color-mix(in srgb, var(--bp-accent) 18%, var(--bp-card-bg));
+    --bp-accent-ring: color-mix(in srgb, var(--bp-accent) 45%, var(--bp-card-bg));
+    --bp-border: color-mix(in srgb, var(--bp-card-text) 16%, transparent);
+    --bp-muted: color-mix(in srgb, var(--bp-card-text) 55%, transparent);
   }
 
   .bundle-picker-{{ block.id }} .bp-heading {
@@ -324,11 +332,12 @@
     gap: 1.4rem;
   }
   .bundle-picker-{{ block.id }} .bp-tier2 {
-    --bp-blue: #1d63e9;
+    --bp-blue: var(--bp-highlight);
     position: relative;
     border-radius: 1.4rem;
-    background: var(--bp-accent);
-    color: #14110c;
+    background: color-mix(in srgb, var(--bp-card-text) 7%, transparent);
+    color: var(--bp-card-text);
+    border: 1px solid var(--bp-border);
     overflow: hidden;
     box-shadow: 0 0 0 2px transparent;
     transition: box-shadow 0.15s ease;
@@ -377,7 +386,7 @@
   .bundle-picker-{{ block.id }} .bp-tier2__sub {
     font-size: 1.35rem;
     font-weight: 600;
-    color: rgba(20, 17, 12, 0.72);
+    color: var(--bp-muted);
   }
   .bundle-picker-{{ block.id }} .bp-tier2__prices {
     display: flex;
@@ -393,7 +402,7 @@
   }
   .bundle-picker-{{ block.id }} .bp-tier2__was {
     font-size: 1.4rem;
-    color: rgba(20, 17, 12, 0.55);
+    color: var(--bp-muted);
   }
   .bundle-picker-{{ block.id }} .bp-tier2__ribbon {
     position: absolute;
@@ -420,7 +429,7 @@
   .bundle-picker-{{ block.id }} .bp-vlabel {
     font-size: 1.25rem;
     font-weight: 700;
-    color: rgba(20, 17, 12, 0.72);
+    color: var(--bp-muted);
   }
   .bundle-picker-{{ block.id }} .bp-vslot {
     display: flex;
@@ -433,7 +442,7 @@
     flex: 0 0 auto;
     border-radius: 0.6rem;
     object-fit: cover;
-    background: rgba(0, 0, 0, 0.12);
+    background: color-mix(in srgb, var(--bp-card-text) 12%, transparent);
   }
   .bundle-picker-{{ block.id }} .bp-vslot__img:not([src]) {
     visibility: hidden;
@@ -442,16 +451,16 @@
     flex: 1 1 auto;
     padding: 1rem 1.1rem;
     border-radius: 0.8rem;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    background: #ffffff;
-    color: #14110c;
+    border: 1px solid var(--bp-border);
+    background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg));
+    color: var(--bp-card-text);
     font-size: 1.4rem;
     font-weight: 600;
   }
 
   .bundle-picker-{{ block.id }} .bp-addons {
     margin: 1rem -2rem -1.8rem;
-    background: #1d63e9;
+    background: var(--bp-highlight);
     color: #ffffff;
   }
   .bundle-picker-{{ block.id }} .bp-addon {
@@ -570,20 +579,38 @@
     {
       "type": "color",
       "id": "background_color",
-      "label": "Background color",
-      "default": "#ffffff"
+      "label": "Section background",
+      "default": "#0d0d14"
     },
     {
       "type": "color",
       "id": "text_color",
-      "label": "Text color",
-      "default": "#1a1a1a"
+      "label": "Section text (heading)",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_background_color",
+      "label": "Card background",
+      "default": "#161620"
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Card text",
+      "default": "#ffffff"
     },
     {
       "type": "color",
       "id": "accent_color",
       "label": "Button / accent color",
       "default": "#f58220"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "Highlight (tier ring, add-on band, pills)",
+      "default": "#8b5cf6"
     },
     {
       "type": "range",
