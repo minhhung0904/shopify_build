@@ -43,12 +43,25 @@
       font-size: 1.3rem;
     }
 
+    /* Narrower overall product layout on desktop. */
+    #MainProduct-{{ section.id }} .page-width {
+      max-width: 960px;
+    }
+
     /* Force the main gallery viewer into a fixed square frame: every
        image shrinks to fit inside it (media_fit: contain) instead of
        the box changing shape to match each image's own ratio. */
     #MediaGallery-{{ section.id }} .product-media-container {
       --ratio: 1 !important;
       --aspect-ratio: 1 !important;
+    }
+
+    /* media_fit: contain sizes the box to match the image's own ratio,
+       but we've forced a square box above — without this, the browser's
+       default object-fit: cover would crop the image to fill that square
+       instead of shrinking it to show the whole photo. */
+    #MediaGallery-{{ section.id }} .media > img {
+      object-fit: contain !important;
     }
 
     /* Smaller thumbnail strip below the main image. */
