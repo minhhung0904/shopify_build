@@ -45,7 +45,18 @@
 
     /* Narrower overall product layout on desktop. */
     #MainProduct-{{ section.id }} .page-width {
-      max-width: 1140px;
+      max-width: 1280px;
+    }
+
+    /* Slightly smaller product title. */
+    #MainProduct-{{ section.id }} .product__title h1 {
+      font-size: 2.4rem;
+    }
+
+    /* Price in the site's main accent color. */
+    #MainProduct-{{ section.id }} .price-item--sale,
+    #MainProduct-{{ section.id }} span.price-item--regular {
+      color: rgb(var(--color-button));
     }
 
     /* Force the main gallery viewer into a fixed square frame: every
