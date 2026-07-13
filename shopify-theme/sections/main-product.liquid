@@ -45,13 +45,22 @@
 
     /* Slightly smaller product title. */
     #MainProduct-{{ section.id }} .product__title h1 {
-      font-size: 2.4rem;
+      font-size: 2.6rem;
     }
 
-    /* Price in the site's main accent color. */
+    /* Price in the site's main accent color, a bit larger. */
     #MainProduct-{{ section.id }} .price-item--sale,
     #MainProduct-{{ section.id }} span.price-item--regular {
       color: rgb(var(--color-button));
+    }
+
+    #MainProduct-{{ section.id }} .price--large {
+      font-size: 2rem;
+    }
+
+    /* Bump up the general text size of the info column a bit. */
+    #MainProduct-{{ section.id }} .product__info-container {
+      font-size: 1.05em;
     }
 
     /* Force the main gallery viewer into a fixed square frame: every
@@ -70,20 +79,25 @@
       object-fit: contain !important;
     }
 
-    /* Smaller thumbnail strip below the main image. */
+    /* Thumbnail strip below the main image: bigger, and centered under it. */
+    #MediaGallery-{{ section.id }} .thumbnail-list.slider--tablet-up,
+    #MediaGallery-{{ section.id }} .thumbnail-list.slider {
+      justify-content: center;
+    }
+
     #MediaGallery-{{ section.id }} .thumbnail-list__item.slider__slide {
-      width: calc(25% - 0.6rem);
+      width: calc(33% - 0.6rem);
     }
 
     @media screen and (min-width: 750px) {
       #MediaGallery-{{ section.id }} .thumbnail-list.slider--tablet-up .thumbnail-list__item.slider__slide {
-        width: calc(16.66% - 0.8rem);
+        width: calc(22% - 0.8rem);
       }
     }
 
     @media screen and (min-width: 900px) {
       #MediaGallery-{{ section.id }} .thumbnail-list.slider--tablet-up .thumbnail-list__item.slider__slide {
-        width: calc(12.5% - 0.8rem);
+        width: calc(18% - 0.8rem);
       }
     }
 
