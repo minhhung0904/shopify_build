@@ -107,27 +107,67 @@
   --card-solid-button-text: var(--color-button-text);
 }
 
-.collection .price-item--sale {
+.collection .price-item--sale,
+.collection span.price-item--regular {
   color: rgb(var(--card-solid-button));
   font-weight: 700;
 }
 
+.collection .price {
+  min-height: 2.6em;
+}
+
+/* Same wipe-in hover used by the homepage contact form's Send button
+   (see sections/contact-form.liquid): white fills in from both edges
+   while the label flips to the accent color, instead of a plain
+   background-color swap. */
 .collection .quick-add__submit {
-  --color-button: var(--card-solid-button);
-  --color-button-text: var(--card-solid-button-text);
-  --alpha-button-background: 1;
-  --buttons-radius: 10px;
-  --buttons-radius-outset: 10px;
-  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgb(var(--card-solid-button));
   border-radius: 10px;
-  transition: background-color 0.15s ease;
+  background-color: rgb(var(--card-solid-button));
+  color: rgb(var(--card-solid-button-text));
+  font-weight: 600;
+  z-index: 0;
+  transition: color 0.45s ease;
+}
+
+.collection .quick-add__submit::before,
+.collection .quick-add__submit::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  height: auto;
+  background-color: #ffffff;
+  background-image: none;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0;
+  z-index: -1;
+  transition: width 0.45s ease;
+}
+
+.collection .quick-add__submit::before {
+  left: 0;
+  right: auto;
+}
+
+.collection .quick-add__submit::after {
+  right: 0;
+  left: auto;
+}
+
+.collection .quick-add__submit:hover::before,
+.collection .quick-add__submit:hover::after,
+.collection .quick-add__submit:focus-visible::before,
+.collection .quick-add__submit:focus-visible::after {
+  width: 50%;
 }
 
 .collection .quick-add__submit:hover,
 .collection .quick-add__submit:focus-visible {
-  background-color: color-mix(in srgb, rgb(var(--card-solid-button)) 85%, black) !important;
-}
-
-.collection .quick-add__submit:active {
-  background-color: color-mix(in srgb, rgb(var(--card-solid-button)) 70%, black) !important;
+  color: rgb(var(--card-solid-button));
 }

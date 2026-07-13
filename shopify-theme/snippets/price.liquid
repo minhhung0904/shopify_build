@@ -8,6 +8,9 @@
   - show_badges: {Boolean} Renders 'Sale' and 'Sold Out' tags if the product matches the condition (optional)
   - price_class: {String} Adds a price class to the price element (optional)
   - show_compare_at_price: {Boolean} Renders the compare at price if the product matches the condition (optional)
+  - always_show_compare: {Boolean} When true, renders the struck-through compare-at price layout
+    even for products without a real compare_at_price, using the regular price as the struck-through
+    value so every card reserves the same two-line layout (optional)
 
   Usage:
   {% render 'price', product: product %}
@@ -23,6 +26,14 @@
 
   assign compare_at_price = target.compare_at_price
   assign price = target.price | default: 1999
+
+  assign show_sale_layout = false
+  if compare_at_price > price
+    assign show_sale_layout = true
+  elsif always_show_compare and price > 0
+    assign show_sale_layout = true
+    assign compare_at_price = price
+  endif
   assign price_min = product.price_min
   assign price_max = product.price_max
   assign available = target.available | default: false
@@ -46,8 +57,8 @@
       price
       {%- if price_class %} {{ price_class }}{% endif -%}
       {%- if available == false %} price--sold-out{% endif -%}
-      {%- if compare_at_price > price and product.quantity_price_breaks_configured? != true %} price--on-sale{% endif -%}
-      {%- if compare_at_price > price and product.quantity_price_breaks_configured? %} volume-pricing--sale-badge{% endif -%}
+      {%- if show_sale_layout and product.quantity_price_breaks_configured? != true %} price--on-sale{% endif -%}
+      {%- if show_sale_layout and product.quantity_price_breaks_configured? %} volume-pricing--sale-badge{% endif -%}
       {%- if product.price_varies == false and product.compare_at_price_varies %} price--no-compare{% endif -%}
       {%- if show_badges %} price--show-badge{% endif -%}
     "
