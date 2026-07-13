@@ -38,11 +38,21 @@
   {%- style -%}
     .bundle-picker-{{ block.id }}.bpp { padding-left: 0; padding-right: 0; }
     .bundle-picker-{{ block.id }} .bpp-title {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
       font-size: 1.7rem;
       font-weight: 800;
       letter-spacing: 0.02em;
       text-transform: uppercase;
       margin: 0 0 1.4rem;
+    }
+    .bundle-picker-{{ block.id }} .bpp-title::before,
+    .bundle-picker-{{ block.id }} .bpp-title::after {
+      content: '';
+      flex: 1 1 auto;
+      height: 1px;
+      background: color-mix(in srgb, currentColor 25%, transparent);
     }
     .bundle-picker-{{ block.id }} .bpp-inner { max-width: 56rem; }
   {%- endstyle -%}
