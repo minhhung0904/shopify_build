@@ -38,6 +38,14 @@
         padding-bottom: {{ section.settings.padding_bottom }}px;
       }
     }
+
+    #MainProduct-{{ section.id }} .accordion__title {
+      font-size: 1.3rem;
+    }
+
+    #MainProduct-{{ section.id }} .accordion__content {
+      font-size: 1.3rem;
+    }
   {%- endstyle -%}
 
   <script src="{{ 'product-info.js' | asset_url }}" defer="defer"></script>

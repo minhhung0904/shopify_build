@@ -83,6 +83,7 @@
         "vendor",
         "title",
         "price",
+        "description",
         "variant_picker",
         "quantity_selector",
         "buy_buttons",
@@ -90,7 +91,6 @@
         "faq_1",
         "faq_2",
         "faq_3",
-        "description",
         "share"
       ],
       "settings": {
