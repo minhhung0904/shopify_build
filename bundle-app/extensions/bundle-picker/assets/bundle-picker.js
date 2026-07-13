@@ -1,13 +1,11 @@
 function formatMoney(cents, currency) {
   const amount = (Number(cents) || 0) / 100;
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: currency || 'USD',
-    }).format(amount);
-  } catch {
-    return `$${amount.toFixed(2)}`;
-  }
+  // Keep a plain "$" symbol only (no "US" locale prefix like "US$").
+  const number = amount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `$${number}`;
 }
 
 function applyDiscount(baseCents, discountType, discountValue) {

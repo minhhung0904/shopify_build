@@ -100,13 +100,15 @@
 
   .bundle-picker-{{ scope }} .bp-card__submit {
     width: 100%;
-    padding: 1.3rem 1.6rem;
+    padding: 1.2rem 1.6rem;
     border: none;
-    border-radius: 999px;
+    border-radius: 4px;
     background: var(--bp-accent);
     color: #ffffff;
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     cursor: pointer;
     transition: filter 0.15s ease, transform 0.05s ease;
   }
@@ -178,46 +180,43 @@
   .bundle-picker-{{ scope }} .bp-tier.is-active { background: var(--bp-accent); color: #ffffff; font-weight: 700; }
 
   /* Tiered offer rows */
-  .bundle-picker-{{ scope }} .bp-tierlist { list-style: none; margin: 0 0 1.6rem; padding: 0; display: flex; flex-direction: column; gap: 1.4rem; }
+  .bundle-picker-{{ scope }} .bp-tierlist { list-style: none; margin: 0 0 1.2rem; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
   .bundle-picker-{{ scope }} .bp-tier2 {
     --bp-blue: var(--bp-highlight);
-    position: relative; border-radius: 1.4rem;
+    position: relative; border-radius: 1rem;
     background: var(--bp-accent);
     color: var(--bp-card-text); border: none;
     overflow: visible; box-shadow: 0 0 0 2px transparent; transition: box-shadow 0.15s ease;
   }
   .bundle-picker-{{ scope }} .bp-tier2.is-selected { box-shadow: 0 0 0 3px var(--bp-blue); }
-  .bundle-picker-{{ scope }} .bp-tier2__head { display: flex; align-items: center; gap: 1.4rem; padding: 1.8rem 2rem; cursor: pointer; }
-  .bundle-picker-{{ scope }} .bp-tier2__radio { width: 2.2rem; height: 2.2rem; flex: 0 0 auto; accent-color: var(--bp-blue); }
-  .bundle-picker-{{ scope }} .bp-tier2__info { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 auto; min-width: 0; }
-  .bundle-picker-{{ scope }} .bp-tier2__title { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em; }
-  .bundle-picker-{{ scope }} .bp-tier2__savepill { font-size: 1.2rem; font-weight: 800; color: #ffffff; background: var(--bp-blue); padding: 0.3rem 0.9rem; border-radius: 999px; white-space: nowrap; }
-  .bundle-picker-{{ scope }} .bp-tier2__sub { font-size: 1.35rem; font-weight: 600; color: var(--bp-muted); }
+  .bundle-picker-{{ scope }} .bp-tier2__head { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; }
+  .bundle-picker-{{ scope }} .bp-tier2__radio { width: 1.9rem; height: 1.9rem; flex: 0 0 auto; accent-color: var(--bp-blue); }
+  .bundle-picker-{{ scope }} .bp-tier2__info { display: flex; flex-direction: column; gap: 0.2rem; flex: 1 1 auto; min-width: 0; }
+  .bundle-picker-{{ scope }} .bp-tier2__title { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
+  .bundle-picker-{{ scope }} .bp-tier2__savepill { font-size: 1.1rem; font-weight: 800; color: #ffffff; background: var(--bp-blue); padding: 0.2rem 0.7rem; border-radius: 999px; white-space: nowrap; }
+  .bundle-picker-{{ scope }} .bp-tier2__sub { font-size: 1.2rem; font-weight: 600; color: var(--bp-muted); }
   .bundle-picker-{{ scope }} .bp-tier2__prices { display: flex; flex-direction: column; align-items: flex-end; text-align: right; flex: 0 0 auto; }
-  .bundle-picker-{{ scope }} .bp-tier2__now { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
-  .bundle-picker-{{ scope }} .bp-tier2__was { font-size: 1.4rem; color: var(--bp-muted); }
+  .bundle-picker-{{ scope }} .bp-tier2__now { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+  .bundle-picker-{{ scope }} .bp-tier2__was { font-size: 1.25rem; color: var(--bp-muted); }
   .bundle-picker-{{ scope }} .bp-tier2__ribbon {
-    position: absolute; top: -1.2rem; right: 1.6rem; z-index: 1;
-    width: 7.4rem; height: 7.4rem; display: flex; align-items: center; justify-content: center;
-    text-align: center; line-height: 1.2; padding: 0.5rem;
-    font-size: 1.05rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em;
-    color: #ffffff; background: var(--bp-blue); border-radius: 50%;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    position: absolute; top: -1rem; right: -0.8rem; z-index: 2;
+    width: 8.4rem; height: auto; display: block; pointer-events: none;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
   }
   .bundle-picker-{{ scope }} .bp-tier2__body[hidden] { display: none; }
-  .bundle-picker-{{ scope }} .bp-tier2__body { padding: 0 2rem 1.8rem; display: flex; flex-direction: column; gap: 0.9rem; }
-  .bundle-picker-{{ scope }} .bp-vlabel { font-size: 1.25rem; font-weight: 700; color: var(--bp-muted); }
-  .bundle-picker-{{ scope }} .bp-vslot { display: flex; align-items: center; gap: 1rem; }
-  .bundle-picker-{{ scope }} .bp-vslot__img { width: 4.4rem; height: 4.4rem; flex: 0 0 auto; border-radius: 0.6rem; object-fit: cover; background: color-mix(in srgb, var(--bp-card-text) 12%, transparent); }
+  .bundle-picker-{{ scope }} .bp-tier2__body { padding: 0 1.2rem 1.2rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  .bundle-picker-{{ scope }} .bp-vlabel { font-size: 1.15rem; font-weight: 700; color: var(--bp-muted); }
+  .bundle-picker-{{ scope }} .bp-vslot { display: flex; align-items: center; gap: 0.8rem; }
+  .bundle-picker-{{ scope }} .bp-vslot__img { width: 3.4rem; height: 3.4rem; flex: 0 0 auto; border-radius: 0.5rem; object-fit: cover; background: color-mix(in srgb, var(--bp-card-text) 12%, transparent); }
   .bundle-picker-{{ scope }} .bp-vslot__img:not([src]) { visibility: hidden; }
-  .bundle-picker-{{ scope }} .bp-vslot__select { flex: 1 1 auto; padding: 1rem 1.1rem; border-radius: 0.8rem; border: 1px solid var(--bp-border); background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg)); color: var(--bp-card-text); font-size: 1.4rem; font-weight: 600; }
-  .bundle-picker-{{ scope }} .bp-addons { margin: 1rem -2rem -1.8rem; background: var(--bp-highlight); color: #ffffff; }
-  .bundle-picker-{{ scope }} .bp-addon { display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem 2rem; cursor: pointer; border-top: 1px solid rgba(255, 255, 255, 0.16); }
+  .bundle-picker-{{ scope }} .bp-vslot__select { flex: 1 1 auto; padding: 0.6rem 0.8rem; border-radius: 0.6rem; border: 1px solid var(--bp-border); background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg)); color: var(--bp-card-text); font-size: 1.25rem; font-weight: 600; }
+  .bundle-picker-{{ scope }} .bp-addons { margin: 0.8rem -1.2rem -1.2rem; background: color-mix(in srgb, var(--bp-card-text) 5%, var(--bp-card-bg)); color: var(--bp-card-text); }
+  .bundle-picker-{{ scope }} .bp-addon { display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1.2rem; cursor: pointer; border-top: 1px solid var(--bp-border); }
   .bundle-picker-{{ scope }} .bp-addon:first-child { border-top: 0; }
-  .bundle-picker-{{ scope }} .bp-addon__cb { width: 1.9rem; height: 1.9rem; flex: 0 0 auto; accent-color: #ffffff; }
-  .bundle-picker-{{ scope }} .bp-addon__img { width: 3.6rem; height: 3.6rem; flex: 0 0 auto; border-radius: 0.5rem; object-fit: cover; background: rgba(255, 255, 255, 0.15); }
-  .bundle-picker-{{ scope }} .bp-addon__name { flex: 1 1 auto; font-size: 1.4rem; font-weight: 700; min-width: 0; }
+  .bundle-picker-{{ scope }} .bp-addon__cb { width: 1.7rem; height: 1.7rem; flex: 0 0 auto; accent-color: var(--bp-accent); }
+  .bundle-picker-{{ scope }} .bp-addon__img { width: 3rem; height: 3rem; flex: 0 0 auto; border-radius: 0.5rem; object-fit: cover; background: color-mix(in srgb, var(--bp-card-text) 10%, transparent); }
+  .bundle-picker-{{ scope }} .bp-addon__name { flex: 1 1 auto; font-size: 1.25rem; font-weight: 700; min-width: 0; color: var(--bp-card-text); }
   .bundle-picker-{{ scope }} .bp-addon__prices { display: flex; flex-direction: column; align-items: flex-end; text-align: right; flex: 0 0 auto; }
-  .bundle-picker-{{ scope }} .bp-addon__now { font-size: 1.5rem; font-weight: 800; }
-  .bundle-picker-{{ scope }} .bp-addon__was { font-size: 1.2rem; opacity: 0.72; }
+  .bundle-picker-{{ scope }} .bp-addon__now { font-size: 1.35rem; font-weight: 800; color: var(--bp-card-text); }
+  .bundle-picker-{{ scope }} .bp-addon__was { font-size: 1.15rem; opacity: 0.6; color: var(--bp-card-text); }
 {%- endstyle -%}

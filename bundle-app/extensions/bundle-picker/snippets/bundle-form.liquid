@@ -331,7 +331,7 @@
                     <s class="bp-tier2__was" data-bp-was></s>
                   </span>
                   {%- if tier.mostPopular -%}
-                    <span class="bp-tier2__ribbon">Most Popular</span>
+                    <img class="bp-tier2__ribbon" src="{{ 'most-popular.png' | asset_url }}" alt="Most Popular" loading="lazy" width="120" height="66" onerror="this.style.display='none'">
                   {%- endif -%}
                 </label>
                 <div class="bp-tier2__body" data-bp-body hidden></div>
@@ -340,7 +340,7 @@
           </ul>
 
           <button type="button" class="bp-card__submit" data-bundle-submit>
-            Add bundle to cart
+            ADD TO CART
           </button>
           <p class="bp-card__error" data-bundle-error role="alert"></p>
         </bundle-tiered>
