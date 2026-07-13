@@ -113,6 +113,19 @@
   font-weight: 700;
 }
 
+.collection .card__heading {
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+/* Center the collection page's title ("Products", or the collection name). */
+.collection-hero__text-wrapper {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Frame is forced square (templates/collection.json image_ratio), but a
    source image that isn't square should shrink to fit inside it instead
    of being cropped by the default object-fit: cover. */
