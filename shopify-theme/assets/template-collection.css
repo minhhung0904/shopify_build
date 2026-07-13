@@ -98,8 +98,10 @@
   margin-top: 1rem;
 }
 
-/* Money-back-guarantee style product cards: solid pill add-to-cart button
-   and an orange sale price, scoped to this collection grid only. */
+/* Money-back-guarantee style product cards: solid rounded add-to-cart button
+   with a hover/active shade and an orange sale price, scoped to this
+   collection grid only. The unified card frame itself comes from the
+   sitewide "Card style: Card" theme setting (config/settings_data.json). */
 .collection {
   --card-solid-button: var(--color-button);
   --card-solid-button-text: var(--color-button-text);
@@ -114,17 +116,18 @@
   --color-button: var(--card-solid-button);
   --color-button-text: var(--card-solid-button-text);
   --alpha-button-background: 1;
-  --buttons-radius: 999px;
-  --buttons-radius-outset: 999px;
+  --buttons-radius: 10px;
+  --buttons-radius-outset: 10px;
   font-weight: 600;
-  transition: filter 0.15s ease;
+  border-radius: 10px;
+  transition: background-color 0.15s ease;
 }
 
 .collection .quick-add__submit:hover,
 .collection .quick-add__submit:focus-visible {
-  filter: brightness(0.9);
+  background-color: color-mix(in srgb, rgb(var(--card-solid-button)) 85%, black) !important;
 }
 
 .collection .quick-add__submit:active {
-  filter: brightness(0.8);
+  background-color: color-mix(in srgb, rgb(var(--card-solid-button)) 70%, black) !important;
 }
