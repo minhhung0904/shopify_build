@@ -1,0 +1,31 @@
+{% comment %}
+  Renders a formatted date ("Jul 13th") N days from today.
+
+  Accepts:
+  - days_offset: {Number} days from today (0 = today)
+
+  Usage:
+  {% render 'shipping-timeline-date', days_offset: 0 %}
+{% endcomment %}
+{%- liquid
+  assign now_epoch = 'now' | date: '%s' | plus: 0
+  assign offset_seconds = days_offset | times: 86400
+  assign target_epoch = now_epoch | plus: offset_seconds
+  assign day = target_epoch | date: '%-d' | plus: 0
+  assign month = target_epoch | date: '%b'
+
+  assign suffix = 'th'
+  assign day_mod_10 = day | modulo: 10
+  assign day_mod_100 = day | modulo: 100
+  if day_mod_100 < 11 or day_mod_100 > 13
+    case day_mod_10
+      when 1
+        assign suffix = 'st'
+      when 2
+        assign suffix = 'nd'
+      when 3
+        assign suffix = 'rd'
+    endcase
+  endif
+-%}
+{{- month }} {{ day }}{{ suffix -}}

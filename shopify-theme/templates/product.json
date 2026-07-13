@@ -33,6 +33,42 @@
             "show_gift_card_recipient": true
           }
         },
+        "shipping_timeline": {
+          "type": "shipping_timeline",
+          "settings": {
+            "step1_label": "Ordered",
+            "step2_label": "Order Ready",
+            "ready_min_days": 1,
+            "ready_max_days": 2,
+            "step3_label": "Delivered",
+            "delivered_min_days": 10,
+            "delivered_max_days": 12
+          }
+        },
+        "faq_1": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Are designs accurate?",
+            "icon": "check_mark",
+            "content": "<p>Every design is 100% accurate — there is no need to worry about it not being the same design when it arrives.</p>"
+          }
+        },
+        "faq_2": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Material?",
+            "icon": "check_mark",
+            "content": "<p>Made from high quality materials to ensure the best quality throughout the product.</p>"
+          }
+        },
+        "faq_3": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Where are they made?",
+            "icon": "check_mark",
+            "content": "<p>Each item is carefully made in our own workshop.</p>"
+          }
+        },
         "description": {
           "type": "description"
         },
@@ -50,6 +86,10 @@
         "variant_picker",
         "quantity_selector",
         "buy_buttons",
+        "shipping_timeline",
+        "faq_1",
+        "faq_2",
+        "faq_3",
         "description",
         "share"
       ],

@@ -15,6 +15,7 @@
   {{ 'component-slider.css' | asset_url | stylesheet_tag }}
   {{ 'component-rating.css' | asset_url | stylesheet_tag }}
   {{ 'component-deferred-media.css' | asset_url | stylesheet_tag }}
+  {{ 'component-shipping-timeline.css' | asset_url | stylesheet_tag }}
 
   {% unless product.has_only_default_variant %}
     {{ 'component-product-variant-picker.css' | asset_url | stylesheet_tag }}
@@ -102,6 +103,21 @@
                 {%- endif -%}
               {%- endif -%}
             {%- endfor -%}
+
+            <pre id="bundle-debug-marker" style="white-space:pre-wrap;font-size:10px;color:#ccc;">BUNDLE-DEBUG-START
+product.handle={{ product.handle }}
+bundle_matched={{ bundle_matched }}
+dollar_app_count={{ shop.metaobjects["$app:bundle"].values.size }}
+qualified_count={{ shop.metaobjects["app--395796512769--bundle"].values.size }}
+{%- for bundle in shop.metaobjects["$app:bundle"].values -%}
+---dollar-app---
+title={{ bundle.title.value }} status={{ bundle.status.value }} handles={{ bundle.config.value.productHandles | join: '|' }}
+{%- endfor -%}
+{%- for bundle in shop.metaobjects["app--395796512769--bundle"].values -%}
+---qualified---
+title={{ bundle.title.value }} status={{ bundle.status.value }} handles={{ bundle.config.value.productHandles | join: '|' }}
+{%- endfor -%}
+BUNDLE-DEBUG-END</pre>
 
             {%- for block in section.blocks -%}
               {%- case block.type -%}
@@ -519,6 +535,42 @@
                     section_id: section.id,
                     show_pickup_availability: true
                   -%}
+                {%- when 'shipping_timeline' -%}
+                  <div class="shipping-timeline" {{ block.shopify_attributes }}>
+                    <ol class="shipping-timeline__list" role="list">
+                      <li class="shipping-timeline__step">
+                        <span class="shipping-timeline__icon">
+                          {{- 'icon-cart.svg' | inline_asset_content -}}
+                        </span>
+                        <span class="shipping-timeline__date">
+                          {%- render 'shipping-timeline-date', days_offset: 0 -%}
+                        </span>
+                        <span class="shipping-timeline__label">{{ block.settings.step1_label | escape }}</span>
+                      </li>
+                      <li class="shipping-timeline__step">
+                        <span class="shipping-timeline__icon">
+                          {{- 'icon-truck.svg' | inline_asset_content -}}
+                        </span>
+                        <span class="shipping-timeline__date">
+                          {%- render 'shipping-timeline-date', days_offset: block.settings.ready_min_days -%}
+                          &ndash;
+                          {%- render 'shipping-timeline-date', days_offset: block.settings.ready_max_days -%}
+                        </span>
+                        <span class="shipping-timeline__label">{{ block.settings.step2_label | escape }}</span>
+                      </li>
+                      <li class="shipping-timeline__step">
+                        <span class="shipping-timeline__icon">
+                          {{- 'icon-box.svg' | inline_asset_content -}}
+                        </span>
+                        <span class="shipping-timeline__date">
+                          {%- render 'shipping-timeline-date', days_offset: block.settings.delivered_min_days -%}
+                          &ndash;
+                          {%- render 'shipping-timeline-date', days_offset: block.settings.delivered_max_days -%}
+                        </span>
+                        <span class="shipping-timeline__label">{{ block.settings.step3_label | escape }}</span>
+                      </li>
+                    </ol>
+                  </div>
                 {%- when 'rating' -%}
                   {%- if product.metafields.reviews.rating.value != blank -%}
                     <div class="rating-wrapper">
@@ -960,6 +1012,67 @@
           "default": true,
           "label": "t:sections.main-product.blocks.buy_buttons.settings.show_gift_card_recipient.label",
           "info": "t:sections.main-product.blocks.buy_buttons.settings.show_gift_card_recipient.info"
+        }
+      ]
+    },
+    {
+      "type": "shipping_timeline",
+      "name": "Shipping timeline",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "step1_label",
+          "label": "Step 1 label",
+          "default": "Ordered"
+        },
+        {
+          "type": "text",
+          "id": "step2_label",
+          "label": "Step 2 label",
+          "default": "Order Ready"
+        },
+        {
+          "type": "range",
+          "id": "ready_min_days",
+          "label": "Order ready — earliest (days from now)",
+          "min": 0,
+          "max": 30,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "type": "range",
+          "id": "ready_max_days",
+          "label": "Order ready — latest (days from now)",
+          "min": 0,
+          "max": 30,
+          "step": 1,
+          "default": 2
+        },
+        {
+          "type": "text",
+          "id": "step3_label",
+          "label": "Step 3 label",
+          "default": "Delivered"
+        },
+        {
+          "type": "range",
+          "id": "delivered_min_days",
+          "label": "Delivered — earliest (days from now)",
+          "min": 0,
+          "max": 60,
+          "step": 1,
+          "default": 10
+        },
+        {
+          "type": "range",
+          "id": "delivered_max_days",
+          "label": "Delivered — latest (days from now)",
+          "min": 0,
+          "max": 60,
+          "step": 1,
+          "default": 12
         }
       ]
     },
