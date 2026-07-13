@@ -29,15 +29,15 @@
   .testimonials-{{ section.id }} .testimonials__stars {
     display: inline-flex;
     gap: 0.2rem;
-    color: #F58220;
+    color: #FFC107;
     line-height: 0;
   }
 
   .testimonials-{{ section.id }} .testimonials__stars svg {
     width: 2.8rem;
     height: 2.8rem;
-    fill: #F58220;
-    color: #F58220;
+    fill: #FFC107;
+    color: #FFC107;
   }
 
   .testimonials-{{ section.id }} .testimonials__grid {
@@ -59,27 +59,68 @@
   }
 
   .testimonials-{{ section.id }} .testimonials__card {
-    background: rgb(var(--color-background));
+    position: relative;
+    background: color-mix(in srgb, rgb(var(--color-foreground)) 4%, rgb(var(--color-background)));
     border-radius: var(--product-card-corner-radius, 1.2rem);
-    box-shadow: 0 0.6rem 1.5rem rgba(var(--color-shadow), 0.1);
-    padding: 2.4rem;
+    padding: 2.4rem 2rem 1.6rem;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__card-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
   }
 
   .testimonials-{{ section.id }} .testimonials__card .testimonials__stars svg {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__quote-icon {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    background: var(--testimonials-quote-color, #1d63e9);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__title {
+    margin: 0;
+    font-weight: 700;
   }
 
   .testimonials-{{ section.id }} .testimonials__quote {
     margin: 0;
     line-height: 1.5;
+    font-weight: 700;
+  }
+
+  .testimonials-{{ section.id }} .testimonials__divider {
+    border: none;
+    border-top: 1px solid rgba(var(--color-foreground), 0.12);
+    margin: 0.4rem 0;
+    width: 100%;
   }
 
   .testimonials-{{ section.id }} .testimonials__author {
     font-weight: 700;
+    font-style: italic;
     margin: 0;
   }
 {%- endstyle -%}
@@ -109,13 +150,20 @@
     <ul class="testimonials__grid" role="list">
       {%- for block in section.blocks -%}
         <li class="testimonials__card" {{ block.shopify_attributes }}>
-          <span class="testimonials__stars">
-            {%- assign stars = block.settings.rating | default: 5 -%}
-            {%- for i in (1..stars) -%}
-              {{- star_svg -}}
-            {%- endfor -%}
-          </span>
-          <p class="testimonials__quote">&ldquo;{{ block.settings.quote }}&rdquo;</p>
+          <div class="testimonials__card-top">
+            <span class="testimonials__stars">
+              {%- assign stars = block.settings.rating | default: 5 -%}
+              {%- for i in (1..stars) -%}
+                {{- star_svg -}}
+              {%- endfor -%}
+            </span>
+            <span class="testimonials__quote-icon" aria-hidden="true">&rdquo;</span>
+          </div>
+          {%- if block.settings.title != blank -%}
+            <p class="testimonials__title">&ldquo;{{ block.settings.title }}&rdquo;</p>
+          {%- endif -%}
+          <p class="testimonials__quote">{{ block.settings.quote }}</p>
+          <hr class="testimonials__divider">
           <p class="testimonials__author">{{ block.settings.author }}</p>
         </li>
       {%- endfor -%}
@@ -213,6 +261,12 @@
           "step": 1,
           "default": 5,
           "label": "Star rating"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Short quote (optional)",
+          "info": "Shown in bold above the review text, e.g. \"Worth the purchase\""
         },
         {
           "type": "textarea",

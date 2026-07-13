@@ -101,6 +101,48 @@
         "padding_bottom": 0
       }
     },
+    "testimonials": {
+      "type": "testimonials",
+      "settings": {
+        "heading": "Testimonials",
+        "heading_size": "h1",
+        "show_rating": false,
+        "columns_desktop": "3",
+        "color_scheme": "scheme-1",
+        "padding_top": 36,
+        "padding_bottom": 36
+      },
+      "blocks": {
+        "review_1": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "title": "Worth the purchase",
+            "quote": "Super worth the purchase. Honestly impressed by the quality of these resin lamps. 100% Recommended.",
+            "author": "James Y."
+          }
+        },
+        "review_2": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "title": "Beautiful craftsmanship",
+            "quote": "WOW! Received the Goku resin lamp today, and I can say these are hands down worth the buy. Not only are you supporting a small business but you also get to own the dopest piece of art well done Dave!",
+            "author": "Brenda B."
+          }
+        },
+        "review_3": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "title": "Love the quality",
+            "quote": "Oh. My. Gosh. JUST RECIEVED THE SHENRON LAMP AND GOD BLESS THIS MAN FOR MAKING THESE INCREDIBLE MASTERPIECES!!!! I AM MORE THAN HAPPY. Cheers Dave :)",
+            "author": "Jamie F."
+          }
+        }
+      },
+      "block_order": ["review_1", "review_2", "review_3"]
+    },
     "related-products": {
       "type": "related-products",
       "settings": {
@@ -122,6 +164,7 @@
   },
   "order": [
     "main",
+    "testimonials",
     "disclosures",
     "related-products"
   ]
