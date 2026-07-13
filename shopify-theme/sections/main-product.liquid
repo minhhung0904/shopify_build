@@ -86,6 +86,23 @@
           >
             {%- assign product_form_id = 'product-form-' | append: section.id -%}
 
+            {%- comment -%}
+              When this product is the main product of an active bundle
+              (see bundle-app's bundle-product.liquid block for the matching
+              logic this mirrors), the bundle renders its own variant/quantity/
+              add-to-cart UI, so the standard ones are hidden to avoid two
+              competing add-to-cart flows on the page.
+            {%- endcomment -%}
+            {%- assign bundle_matched = false -%}
+            {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
+              {%- if bundle.status.value == "active" and bundle_matched == false -%}
+                {%- assign bundle_cfg = bundle.config.value -%}
+                {%- if bundle_cfg.productHandles contains product.handle -%}
+                  {%- assign bundle_matched = true -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+
             {%- for block in section.blocks -%}
               {%- case block.type -%}
                 {%- when '@app' -%}
@@ -229,6 +246,7 @@
                     </details>
                   </div>
                 {%- when 'quantity_selector' -%}
+                  {%- if bundle_matched -%}{%- continue -%}{%- endif -%}
                   <div
                     id="Quantity-Form-{{ section.id }}"
                     class="product-form__input product-form__quantity{% if settings.inputs_shadow_vertical_offset != 0 and settings.inputs_shadow_vertical_offset < 0 %} product-form__quantity-top{% endif %}"
@@ -486,12 +504,14 @@
                     surface: 'product_page'
                   -%}
                 {%- when 'variant_picker' -%}
+                  {%- if bundle_matched -%}{%- continue -%}{%- endif -%}
                   {% render 'product-variant-picker',
                     product: product,
                     block: block,
                     product_form_id: product_form_id
                   %}
                 {%- when 'buy_buttons' -%}
+                  {%- if bundle_matched -%}{%- continue -%}{%- endif -%}
                   {%- render 'buy-buttons',
                     block: block,
                     product: product,

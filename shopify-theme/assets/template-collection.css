@@ -97,3 +97,24 @@
 .collection__view-all a:not(.link) {
   margin-top: 1rem;
 }
+
+/* Money-back-guarantee style product cards: solid pill add-to-cart button
+   and an orange sale price, scoped to this collection grid only. */
+.collection {
+  --card-solid-button: var(--color-button);
+  --card-solid-button-text: var(--color-button-text);
+}
+
+.collection .price-item--sale {
+  color: rgb(var(--card-solid-button));
+  font-weight: 700;
+}
+
+.collection .quick-add__submit {
+  --color-button: var(--card-solid-button);
+  --color-button-text: var(--card-solid-button-text);
+  --alpha-button-background: 1;
+  --buttons-radius: 999px;
+  --buttons-radius-outset: 999px;
+  font-weight: 600;
+}
