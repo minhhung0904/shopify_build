@@ -43,6 +43,31 @@
       font-size: 1.3rem;
     }
 
+    /* Force the main gallery viewer into a fixed square frame: every
+       image shrinks to fit inside it (media_fit: contain) instead of
+       the box changing shape to match each image's own ratio. */
+    #MediaGallery-{{ section.id }} .product-media-container {
+      --ratio: 1 !important;
+      --aspect-ratio: 1 !important;
+    }
+
+    /* Smaller thumbnail strip below the main image. */
+    #MediaGallery-{{ section.id }} .thumbnail-list__item.slider__slide {
+      width: calc(25% - 0.6rem);
+    }
+
+    @media screen and (min-width: 750px) {
+      #MediaGallery-{{ section.id }} .thumbnail-list.slider--tablet-up .thumbnail-list__item.slider__slide {
+        width: calc(16.66% - 0.8rem);
+      }
+    }
+
+    @media screen and (min-width: 900px) {
+      #MediaGallery-{{ section.id }} .thumbnail-list.slider--tablet-up .thumbnail-list__item.slider__slide {
+        width: calc(12.5% - 0.8rem);
+      }
+    }
+
     #MainProduct-{{ section.id }} .accordion__content {
       font-size: 1.3rem;
     }
