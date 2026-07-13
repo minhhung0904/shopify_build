@@ -117,4 +117,14 @@
   --buttons-radius: 999px;
   --buttons-radius-outset: 999px;
   font-weight: 600;
+  transition: filter 0.15s ease;
+}
+
+.collection .quick-add__submit:hover,
+.collection .quick-add__submit:focus-visible {
+  filter: brightness(0.9);
+}
+
+.collection .quick-add__submit:active {
+  filter: brightness(0.8);
 }
