@@ -113,6 +113,13 @@
   font-weight: 700;
 }
 
+/* Frame is forced square (templates/collection.json image_ratio), but a
+   source image that isn't square should shrink to fit inside it instead
+   of being cropped by the default object-fit: cover. */
+.collection .card__media .media img {
+  object-fit: contain;
+}
+
 .collection .price {
   min-height: 2.6em;
 }
