@@ -101,9 +101,14 @@
               logic this mirrors), the bundle renders its own variant/quantity/
               add-to-cart UI, so the standard ones are hidden to avoid two
               competing add-to-cart flows on the page.
+
+              NOTE: the "$app:bundle" shorthand only resolves inside files
+              that belong to the app's own theme extension (e.g.
+              bundle-product.liquid). From a plain theme file it's nil, so we
+              use the fully-qualified app-owned metaobject type instead.
             {%- endcomment -%}
             {%- assign bundle_matched = false -%}
-            {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
+            {%- for bundle in shop.metaobjects["app--395796512769--bundle"].values -%}
               {%- if bundle.status.value == "active" and bundle_matched == false -%}
                 {%- assign bundle_cfg = bundle.config.value -%}
                 {%- if bundle_cfg.productHandles contains product.handle -%}
@@ -111,21 +116,6 @@
                 {%- endif -%}
               {%- endif -%}
             {%- endfor -%}
-
-            <pre id="bundle-debug-marker" style="white-space:pre-wrap;font-size:10px;color:#ccc;">BUNDLE-DEBUG-START
-product.handle={{ product.handle }}
-bundle_matched={{ bundle_matched }}
-dollar_app_count={{ shop.metaobjects["$app:bundle"].values.size }}
-qualified_count={{ shop.metaobjects["app--395796512769--bundle"].values.size }}
-{%- for bundle in shop.metaobjects["$app:bundle"].values -%}
----dollar-app---
-title={{ bundle.title.value }} status={{ bundle.status.value }} handles={{ bundle.config.value.productHandles | join: '|' }}
-{%- endfor -%}
-{%- for bundle in shop.metaobjects["app--395796512769--bundle"].values -%}
----qualified---
-title={{ bundle.title.value }} status={{ bundle.status.value }} handles={{ bundle.config.value.productHandles | join: '|' }}
-{%- endfor -%}
-BUNDLE-DEBUG-END</pre>
 
             {%- for block in section.blocks -%}
               {%- case block.type -%}
