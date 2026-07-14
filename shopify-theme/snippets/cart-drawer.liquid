@@ -353,21 +353,17 @@
                               assign group_final_total = group_final_total | plus: other.final_line_price
                               assign group_original_total = group_original_total | plus: other_line_original
                               assign group_count = group_count | plus: 1
-                              # This row's own variant is already shown via the normal
-                              # variant/options display below — only list the *other*
-                              # merged units here, so nothing repeats.
-                              unless other.key == item.key
-                                assign bundle_breakdown = bundle_breakdown | append: other.variant.title | append: ' × ' | append: other.quantity | append: ', '
-                              endunless
+                              # List EVERY unit as "Variant × qty" (including this
+                              # row's own variant) so the merged line shows its
+                              # full make-up instead of a variant/options line.
+                              assign bundle_breakdown = bundle_breakdown | append: other.variant.title | append: ' × ' | append: other.quantity | append: '; '
                             endif
                           endfor
                           assign line_final_price = group_final_total
                           assign line_original_price = group_original_total
-                          if group_count > 1 and bundle_breakdown != ''
+                          if bundle_breakdown != ''
                             assign breakdown_len = bundle_breakdown.size | minus: 2
                             assign bundle_breakdown = bundle_breakdown | slice: 0, breakdown_len
-                          else
-                            assign bundle_breakdown = ''
                           endif
                         endif
                       -%}
@@ -420,6 +416,11 @@
                             <p class="product-option bundle-breakdown">{{ bundle_breakdown }}</p>
                           {%- endif -%}
 
+                          {%- comment -%}
+                            A merged bundle main line lists its units in
+                            bundle_breakdown, so skip its variant/options rows.
+                          {%- endcomment -%}
+                          {%- unless bundle_is_main -%}
                           {%- if item.product.has_only_default_variant == false
                             or item.properties.size != 0
                             or item.selling_plan_allocation != null
@@ -463,6 +464,7 @@
 
                             <p class="product-option">{{ item.selling_plan_allocation.selling_plan.name }}</p>
                           {%- endif -%}
+                          {%- endunless -%}
 
                           <ul
                             class="discounts list-unstyled"

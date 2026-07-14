@@ -200,9 +200,11 @@
     overflow: visible; box-shadow: 0 0 0 2px transparent; transition: box-shadow 0.15s ease;
   }
   .bundle-picker-{{ scope }} .bp-tier2.is-selected { box-shadow: 0 0 0 3px var(--bp-blue); }
-  /* The ribbon now sits on the card's right edge (see .bp-tier2__ribbon), so
-     tiers no longer need extra top room — every tier keeps the same gap. */
+  /* The ribbon overlaps the card's top-right; the popular tier gets extra top
+     padding (internal, so tier-to-tier gaps stay constant) which pushes the
+     title/price down below the ribbon instead of being covered by it. */
   .bundle-picker-{{ scope }} .bp-tier2__head { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; }
+  .bundle-picker-{{ scope }} .bp-tier2.is-popular .bp-tier2__head { padding-top: 3.8rem; }
   .bundle-picker-{{ scope }} .bp-tier2__radio { width: 1.9rem; height: 1.9rem; flex: 0 0 auto; accent-color: var(--bp-blue); }
   .bundle-picker-{{ scope }} .bp-tier2__info { display: flex; flex-direction: column; gap: 0.2rem; flex: 1 1 auto; min-width: 0; }
   .bundle-picker-{{ scope }} .bp-tier2__title { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
@@ -212,10 +214,10 @@
   .bundle-picker-{{ scope }} .bp-tier2__now { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--bp-card-text); }
   .bundle-picker-{{ scope }} .bp-tier2__was { font-size: 1.25rem; color: var(--bp-muted); }
   .bundle-picker-{{ scope }} .bp-tier2__ribbon {
-    /* Sits on the card's top-right corner and pokes out to the right, so it
-       never pushes the tier spacing around. Slightly larger for emphasis. */
-    position: absolute; top: -0.8rem; right: -0.8rem; z-index: 2;
-    width: 7.5rem; height: auto; display: block; pointer-events: none;
+    /* Top-right corner, poking out to the right. The popular tier's extra head
+       padding (above) keeps the title/price clear of it. */
+    position: absolute; top: -0.6rem; right: -0.6rem; z-index: 2;
+    width: 7rem; height: auto; display: block; pointer-events: none;
     filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
   }
   .bundle-picker-{{ scope }} .bp-tier2__body[hidden] { display: none; }
