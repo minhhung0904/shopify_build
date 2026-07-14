@@ -189,28 +189,8 @@ product-info {
   right: 1.5rem;
 }
 
-/* Match the bundle "ADD TO CART" hover (snippets/bundle-picker-css.liquid
-   .bp-card__submit): on hover a white fill sweeps in from both edges to the
-   middle, the background turns white and the label turns the theme's main
-   color. Dawn's growing border-ring (::after) is disabled so only the sweep
-   shows. */
 .product-form__submit {
   margin-bottom: 1rem;
-  background:
-    linear-gradient(#ffffff, #ffffff) left center / 0 100% no-repeat,
-    linear-gradient(#ffffff, #ffffff) right center / 0 100% no-repeat,
-    rgb(var(--color-button));
-  transition: background-size 0.35s ease, color 0.35s ease, transform 0.05s ease;
-}
-.product-form__submit::after {
-  display: none;
-}
-.product-form__submit:not([disabled]):hover {
-  background-size: 50.5% 100%, 50.5% 100%;
-  color: #e8b600;
-}
-.product-form__submit:not([disabled]):active {
-  transform: translateY(1px);
 }
 
 .product-form__submit[aria-disabled='true'] + .shopify-payment-button .shopify-payment-button__button[disabled],

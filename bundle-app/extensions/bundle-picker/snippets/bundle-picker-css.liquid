@@ -98,29 +98,26 @@
   .bundle-picker-{{ scope }} .bp-card__price { font-size: 1.8rem; font-weight: 700; margin: 0; }
   .bundle-picker-{{ scope }} .bp-card__form { margin-top: auto; }
 
+  /* Outlined "secondary" button, to match the theme's list/product add-to-cart
+     (Dawn button--secondary): accent border + accent text on a transparent
+     fill, filling with the accent on hover. */
   .bundle-picker-{{ scope }} .bp-card__submit {
     width: 100%;
     padding: 1.2rem 1.6rem;
     border: 2px solid var(--bp-accent);
     border-radius: 4px;
-    /* Two white layers pinned to the left & right edges, 0-width by default.
-       On hover they each grow to ~half the width, so white sweeps in from both
-       sides to meet in the middle. Accent stays as the base background. */
-    background:
-      linear-gradient(#ffffff, #ffffff) left center / 0 100% no-repeat,
-      linear-gradient(#ffffff, #ffffff) right center / 0 100% no-repeat,
-      var(--bp-accent);
-    color: #ffffff;
+    background: transparent;
+    color: var(--bp-accent);
     font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background-size 0.35s ease, color 0.35s ease, transform 0.05s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.05s ease;
   }
   .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled) {
-    background-size: 50.5% 100%, 50.5% 100%;
-    color: var(--bp-accent);
+    background: var(--bp-accent);
+    color: #ffffff;
   }
   .bundle-picker-{{ scope }} .bp-card__submit:active:not(:disabled) { transform: translateY(1px); }
   .bundle-picker-{{ scope }} .bp-card__submit:disabled { opacity: 0.5; cursor: not-allowed; }
