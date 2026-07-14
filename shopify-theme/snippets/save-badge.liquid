@@ -19,6 +19,6 @@
   {%- assign sb_pct = sb_compare | minus: sb_price | times: 100.0 | divided_by: sb_compare | round -%}
   <span class="save-badge {{ class }}">
     {{- 'icon-discount.svg' | inline_asset_content -}}
-    <span class="save-badge__text">SAVE {{ sb_pct }}%</span>
+    <span class="save-badge__text">{{ 'products.product.save_amount' | t: percent: sb_pct }}</span>
   </span>
 {%- endif -%}
