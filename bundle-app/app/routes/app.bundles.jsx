@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLoaderData, useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import { activateBundleCartTransform } from "../discounts.server";
 
 // Single source of truth for the bundle types the app supports. Each entry
 // declares which form sections it needs so the UI, the index sync, and the
@@ -100,6 +101,9 @@ const emptyForm = {
   status: "active",
   sortOrder: "0",
   accentColor: "#FFCB05",
+  // Cart Transform "container" variant: the parent line a merged bundle folds
+  // into. Null = the bundle is NOT merged into one cart line.
+  containerVariant: null,
   selectedProducts: [],
   volumeTiers: [{ minQuantity: "2", discountType: "percentage", value: "10" }],
   // multipack
@@ -151,6 +155,10 @@ const BUNDLE_FIELDS = `#graphql
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
+  // Self-heal activation for already-installed shops (afterAuth only runs on
+  // install/re-auth). Idempotent and non-throwing.
+  await activateBundleCartTransform(admin);
+
   const response = await admin.graphql(
     `#graphql
       query ListBundles {
@@ -185,6 +193,10 @@ function buildIndexEntry(node) {
     config = {};
   }
 
+  // The "container" variant a Cart Transform merge uses as the parent line for
+  // this bundle (see bundle-cart-transform). Undefined = bundle isn't merged.
+  const parentVariantId = config.parentVariantId || undefined;
+
   if (type === "volume") {
     let volumeTiers = [];
     try {
@@ -192,7 +204,7 @@ function buildIndexEntry(node) {
     } catch {
       volumeTiers = [];
     }
-    return { type, productId: productIds[0], productIds, volumeTiers };
+    return { type, productId: productIds[0], productIds, volumeTiers, parentVariantId };
   }
 
   if (type === "tiered") {
@@ -209,6 +221,7 @@ function buildIndexEntry(node) {
       addOnProductIds: rewardIds,
       addOnDiscountType: config.addOnDiscountType || "percentage",
       addOnDiscountValue: Number(config.addOnDiscountValue || 0),
+      parentVariantId,
     };
   }
 
@@ -221,6 +234,7 @@ function buildIndexEntry(node) {
       getQuantity: Number(config.getQuantity || 1),
       rewardDiscountType: config.rewardDiscountType || "percentage",
       rewardDiscountValue: Number(config.rewardDiscountValue || 0),
+      parentVariantId,
     };
   }
 
@@ -229,6 +243,7 @@ function buildIndexEntry(node) {
     productIds,
     discountType: node.discountType?.value,
     discountValue: Number(node.discountValue?.value || 0),
+    parentVariantId,
   };
 
   if (type === "multipack") {
@@ -482,6 +497,249 @@ function formatFormDiscount(form) {
   return "—";
 }
 
+// --- Storefront-faithful preview -------------------------------------------
+// The editor's right column shows an approximation of how the bundle ACTUALLY
+// renders on the storefront (mirrors extensions/bundle-picker: the bp-* markup
+// + bundle-picker-css.liquid), not a Polaris schematic — so merchants
+// recognise the real widget while building it. Product prices aren't loaded in
+// the admin (the resource picker returns id/title/handle only), so an
+// illustrative unit price is used purely to render the price/discount visuals.
+const PREVIEW_UNIT_CENTS = 2999;
+
+function pvApplyDiscount(baseCents, discountType, discountValue) {
+  const value = Number(discountValue) || 0;
+  if (discountType === "percentage")
+    return Math.max(0, Math.round(baseCents * (1 - value / 100)));
+  if (discountType === "fixed_amount")
+    return Math.max(0, baseCents - Math.round(value * 100));
+  if (discountType === "fixed_price")
+    return Math.max(0, Math.round(value * 100));
+  return baseCents;
+}
+
+function pvMoney(cents) {
+  return `$${((Number(cents) || 0) / 100).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+const PREVIEW_CSS = `
+.bpv { --acc: #E8B600; --card: #ffffff; --txt: #14110c; --hl: #1d63e9;
+  --border: rgba(20,17,12,0.14); --muted: rgba(20,17,12,0.55);
+  font-family: -apple-system, system-ui, sans-serif; color: var(--txt);
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  padding: 1.25rem; max-width: 26rem; }
+.bpv * { box-sizing: border-box; }
+.bpv__title { display: flex; align-items: center; gap: .6rem; font-size: .95rem;
+  font-weight: 800; letter-spacing: .02em; text-transform: uppercase; margin: 0 0 1rem; }
+.bpv__title::before, .bpv__title::after { content:''; flex:1 1 auto; height:1px;
+  background: color-mix(in srgb, currentColor 25%, transparent); }
+.bpv__badge { display:inline-block; background: var(--acc); color:#fff; font-size:.7rem;
+  font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:.25rem .6rem;
+  border-radius:.4rem; margin-bottom:.75rem; }
+.bpv-tierlist { list-style:none; margin:0 0 1rem; padding:0; display:flex; flex-direction:column; gap:.75rem; }
+.bpv-tier2 { position:relative; border-radius:.7rem; background: var(--acc); color: var(--txt);
+  box-shadow: 0 0 0 2px transparent; }
+.bpv-tier2.is-selected { box-shadow: 0 0 0 3px var(--hl); }
+.bpv-tier2.is-popular { margin-top: 1.6rem; }
+.bpv-tier2__ribbon { position:absolute; bottom:100%; right:.8rem; margin-bottom:-.4rem;
+  background: var(--hl); color:#fff; font-size:.62rem; font-weight:800; letter-spacing:.04em;
+  padding:.2rem .5rem; border-radius:.4rem; text-transform:uppercase; }
+.bpv-tier2__head { display:flex; align-items:center; gap:.7rem; padding:.7rem .8rem; }
+.bpv-tier2__radio { width:1.1rem; height:1.1rem; flex:0 0 auto; accent-color: var(--hl); }
+.bpv-tier2__info { display:flex; flex-direction:column; gap:.15rem; flex:1 1 auto; min-width:0; }
+.bpv-tier2__t { display:flex; align-items:center; gap:.5rem; font-size:.95rem; font-weight:800; }
+.bpv-pill { font-size:.6rem; font-weight:800; color:#fff; background: var(--hl);
+  padding:.12rem .45rem; border-radius:999px; white-space:nowrap; }
+.bpv-tier2__sub { font-size:.72rem; font-weight:600; color: var(--muted); }
+.bpv-tier2__prices { display:flex; flex-direction:column; align-items:flex-end; flex:0 0 auto; }
+.bpv-now { font-size:1.15rem; font-weight:800; }
+.bpv-was { font-size:.72rem; color: var(--muted); text-decoration: line-through; }
+.bpv-tier2__body { padding:0 .8rem .8rem; display:flex; flex-direction:column; gap:.5rem; }
+.bpv-vslot { display:flex; align-items:center; gap:.6rem; }
+.bpv-vslot__img { width:2rem; height:2rem; border-radius:.35rem; flex:0 0 auto;
+  background: color-mix(in srgb, var(--txt) 12%, transparent); }
+.bpv-vslot__sel { flex:1 1 auto; padding:.35rem .5rem; border-radius:.4rem; border:1px solid var(--border);
+  background: color-mix(in srgb, var(--txt) 6%, var(--card)); font-size:.78rem; font-weight:600; }
+.bpv-addons { margin:.5rem -.8rem -.8rem; background: color-mix(in srgb, var(--txt) 5%, var(--card)); }
+.bpv-addon { display:flex; align-items:center; gap:.6rem; padding:.5rem .8rem; border-top:1px solid var(--border); }
+.bpv-addon__cb { width:1rem; height:1rem; accent-color: var(--acc); }
+.bpv-addon__img { width:1.8rem; height:1.8rem; border-radius:.35rem; flex:0 0 auto;
+  background: color-mix(in srgb, var(--txt) 10%, transparent); }
+.bpv-addon__name { flex:1 1 auto; font-size:.78rem; font-weight:700; }
+.bpv-addon__price { font-size:.85rem; font-weight:800; }
+.bpv-list { list-style:none; margin:0 0 1rem; padding:0; display:flex; flex-direction:column; gap:.5rem; }
+.bpv-line { display:flex; align-items:center; gap:.6rem; }
+.bpv-line__img { width:2.2rem; height:2.2rem; border-radius:.4rem; flex:0 0 auto;
+  background: color-mix(in srgb, var(--txt) 10%, transparent); }
+.bpv-line__name { flex:1 1 auto; font-size:.85rem; font-weight:600; }
+.bpv-priceRow { display:flex; align-items:baseline; gap:.6rem; margin: .25rem 0 1rem; }
+.bpv-priceRow .bpv-now { font-size:1.4rem; }
+.bpv-submit { width:100%; padding:.85rem 1rem; border:none; border-radius:4px; background: var(--acc);
+  color:#fff; font-size:.95rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; cursor:default; }
+.bpv-note { font-size:.68rem; color: var(--muted); margin:.6rem 0 0; text-align:center; }
+`;
+
+function StorefrontPreview({ form }) {
+  const acc = form.accentColor || "#E8B600";
+  const title = form.title || "Bundle & Save";
+  const products = form.selectedProducts || [];
+  const firstProduct = products[0]?.title || "Product";
+  const addOns = form.rewardProducts || [];
+
+  let inner;
+  if (form.bundleType === "tiered") {
+    const tiers = form.tieredTiers || [];
+    const selIdx = Math.max(0, tiers.findIndex((t) => t.mostPopular));
+    inner = (
+      <>
+        <ul className="bpv-tierlist">
+          {tiers.map((t, i) => {
+            const qty = Number(t.quantity) || 1;
+            const was = PREVIEW_UNIT_CENTS * qty;
+            const now = pvApplyDiscount(was, t.discountType, t.value);
+            const saved = Math.max(0, was - now);
+            const pct = was > 0 ? Math.round((saved / was) * 100) : 0;
+            const selected = i === selIdx;
+            return (
+              <li
+                key={i}
+                className={`bpv-tier2${selected ? " is-selected" : ""}${
+                  t.mostPopular ? " is-popular" : ""
+                }`}
+              >
+                {t.mostPopular ? (
+                  <span className="bpv-tier2__ribbon">Most popular</span>
+                ) : null}
+                <div className="bpv-tier2__head">
+                  <input
+                    type="radio"
+                    className="bpv-tier2__radio"
+                    checked={selected}
+                    readOnly
+                  />
+                  <div className="bpv-tier2__info">
+                    <div className="bpv-tier2__t">
+                      {t.title || `${qty}-pack`}
+                      {saved > 0 ? (
+                        <span className="bpv-pill">SAVE {pvMoney(saved)}</span>
+                      ) : null}
+                    </div>
+                    <div className="bpv-tier2__sub">
+                      {saved > 0 ? `You save ${pct}%` : "Standard price"}
+                    </div>
+                  </div>
+                  <div className="bpv-tier2__prices">
+                    <span className="bpv-now">{pvMoney(now)}</span>
+                    {now < was ? (
+                      <span className="bpv-was">{pvMoney(was)}</span>
+                    ) : null}
+                  </div>
+                </div>
+                {selected ? (
+                  <div className="bpv-tier2__body">
+                    {Array.from({ length: qty }).map((_, s) => (
+                      <div className="bpv-vslot" key={s}>
+                        <span className="bpv-vslot__img" />
+                        <select className="bpv-vslot__sel" disabled>
+                          <option>{firstProduct}</option>
+                        </select>
+                      </div>
+                    ))}
+                    {addOns.length > 0 ? (
+                      <div className="bpv-addons">
+                        {addOns.map((a) => {
+                          const p = pvApplyDiscount(
+                            PREVIEW_UNIT_CENTS,
+                            form.rewardDiscountType,
+                            form.rewardDiscountValue,
+                          );
+                          return (
+                            <label className="bpv-addon" key={a.id}>
+                              <input
+                                type="checkbox"
+                                className="bpv-addon__cb"
+                                defaultChecked
+                              />
+                              <span className="bpv-addon__img" />
+                              <span className="bpv-addon__name">{a.title}</span>
+                              <span className="bpv-addon__price">
+                                {pvMoney(p)}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+        <button type="button" className="bpv-submit">
+          Add to cart
+        </button>
+      </>
+    );
+  } else {
+    // Fixed / variant / multipack / mix & match / infinite / volume / bogo:
+    // a product card with the included lines, a headline price and the button.
+    const count =
+      form.bundleType === "multipack"
+        ? Number(form.packSize) || 1
+        : products.length || 1;
+    const was = PREVIEW_UNIT_CENTS * count;
+    const now = usesDiscount(form.bundleType)
+      ? pvApplyDiscount(was, form.discountType, form.discountValue)
+      : was;
+    const shownProducts = products.length ? products : [{ id: "ph", title: "Your product" }];
+    inner = (
+      <>
+        <ul className="bpv-list">
+          {shownProducts.map((p) => (
+            <li className="bpv-line" key={p.id}>
+              <span className="bpv-line__img" />
+              <span className="bpv-line__name">{p.title}</span>
+            </li>
+          ))}
+        </ul>
+        {form.bundleType === "bogo" && addOns.length > 0 ? (
+          <ul className="bpv-list">
+            {addOns.map((p) => (
+              <li className="bpv-line" key={p.id}>
+                <span className="bpv-line__img" />
+                <span className="bpv-line__name">+ {p.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="bpv-priceRow">
+          <span className="bpv-now">{pvMoney(now)}</span>
+          {now < was ? <span className="bpv-was">{pvMoney(was)}</span> : null}
+        </div>
+        <button type="button" className="bpv-submit">
+          Add to cart
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <div className="bpv" style={{ "--acc": acc }}>
+      <style dangerouslySetInnerHTML={{ __html: PREVIEW_CSS }} />
+      {form.badgeText ? <span className="bpv__badge">{form.badgeText}</span> : null}
+      <h3 className="bpv__title">{title}</h3>
+      {inner}
+      <p className="bpv-note">
+        Live preview · prices are illustrative ({pvMoney(PREVIEW_UNIT_CENTS)}
+        /unit)
+      </p>
+    </div>
+  );
+}
+
 export default function Bundles() {
   const { bundles } = useLoaderData();
   const fetcher = useFetcher();
@@ -538,6 +796,9 @@ export default function Bundles() {
       status: bundle.status?.value || "active",
       sortOrder: bundle.sortOrder?.value || "0",
       accentColor: config.accentColor || emptyForm.accentColor,
+      containerVariant: config.parentVariantId
+        ? { id: config.parentVariantId, title: config.parentVariantTitle || "Selected variant" }
+        : null,
       selectedProducts: (bundle.products?.references?.nodes || []).map((p) => ({
         id: p.id,
         title: p.title,
@@ -612,6 +873,31 @@ export default function Bundles() {
     }
   };
 
+  // Picks the single "container" variant that a Cart Transform merge uses as
+  // the parent line so the whole bundle shows as one cart item.
+  const pickContainerVariant = async () => {
+    const selected = await shopify.resourcePicker({
+      type: "variant",
+      multiple: false,
+      selectionIds: form.containerVariant ? [{ id: form.containerVariant.id }] : [],
+    });
+    if (selected && selected[0]) {
+      const v = selected[0];
+      setForm((prev) => ({
+        ...prev,
+        containerVariant: {
+          id: v.id,
+          title: [v.product?.title || v.displayName, v.title]
+            .filter(Boolean)
+            .join(" · "),
+        },
+      }));
+    }
+  };
+
+  const clearContainerVariant = () =>
+    setForm((prev) => ({ ...prev, containerVariant: null }));
+
   const addTierRow = () =>
     setForm((prev) => ({
       ...prev,
@@ -677,6 +963,14 @@ export default function Bundles() {
       productHandles: form.selectedProducts.map((p) => p.handle).filter(Boolean),
       addOnHandles: form.rewardProducts.map((p) => p.handle).filter(Boolean),
       accentColor: form.accentColor,
+      // Cart Transform container variant (see bundle-cart-transform). Stored in
+      // config so it syncs into $app:bundle_index via buildIndexEntry.
+      ...(form.containerVariant
+        ? {
+            parentVariantId: form.containerVariant.id,
+            parentVariantTitle: form.containerVariant.title,
+          }
+        : {}),
     };
     if (form.bundleType === "multipack") {
       return { ...base, packSize: Number(form.packSize) || 1 };
@@ -1273,6 +1567,30 @@ export default function Bundles() {
             </s-text>
           </s-stack>
 
+          <s-stack direction="block" gap="small-300">
+            <s-text type="strong">Merge into one cart line (optional)</s-text>
+            <s-paragraph color="subdued">
+              Pick a “container” product variant to represent this bundle. When
+              set, the bundle’s items are merged into a single cart line at the
+              bundle total (Cart Transform). Leave empty to keep separate lines.
+            </s-paragraph>
+            <s-stack direction="inline" gap="base" alignItems="center">
+              <s-button onClick={pickContainerVariant}>
+                {form.containerVariant ? "Change container variant" : "Choose container variant"}
+              </s-button>
+              <s-text>
+                {form.containerVariant
+                  ? form.containerVariant.title
+                  : "Not merged (separate lines)"}
+              </s-text>
+              {form.containerVariant ? (
+                <s-button variant="tertiary" tone="critical" onClick={clearContainerVariant}>
+                  Clear
+                </s-button>
+              ) : null}
+            </s-stack>
+          </s-stack>
+
           <s-stack direction="inline" gap="base">
             <s-number-field
               label="Sort order"
@@ -1298,76 +1616,16 @@ export default function Bundles() {
 
         <s-grid-item gridColumn="span 5">
           <s-section heading="Preview">
-            <s-box
-              border="base"
-              borderRadius="base"
-              padding="base"
-              background="subdued"
-            >
-              <s-stack direction="block" gap="base">
-                {form.badgeText ? (
-                  <s-badge tone="success">{form.badgeText}</s-badge>
-                ) : null}
-                <s-heading>{form.title || "Untitled bundle"}</s-heading>
+            <s-stack direction="block" gap="base">
+              <StorefrontPreview form={form} />
+              <s-stack direction="inline" gap="base" alignItems="center">
                 <s-badge tone="info">{typeLabel(form.bundleType)}</s-badge>
-                {form.description ? (
-                  <s-paragraph color="subdued">{form.description}</s-paragraph>
-                ) : null}
-
-                <s-divider></s-divider>
-
-                <s-text type="strong">
-                  {form.bundleType === "bogo" ? "Buy products" : "Includes"}
-                </s-text>
-                {form.selectedProducts.length > 0 ? (
-                  <s-unordered-list>
-                    {form.selectedProducts.map((p) => (
-                      <s-list-item key={p.id}>{p.title}</s-list-item>
-                    ))}
-                  </s-unordered-list>
-                ) : (
-                  <s-paragraph color="subdued">
-                    No products selected yet
-                  </s-paragraph>
-                )}
-
-                {form.bundleType === "bogo" || form.bundleType === "tiered" ? (
-                  <>
-                    <s-text type="strong">
-                      {form.bundleType === "tiered"
-                        ? "Add-on products"
-                        : "Get products"}
-                    </s-text>
-                    {form.rewardProducts.length > 0 ? (
-                      <s-unordered-list>
-                        {form.rewardProducts.map((p) => (
-                          <s-list-item key={p.id}>{p.title}</s-list-item>
-                        ))}
-                      </s-unordered-list>
-                    ) : (
-                      <s-paragraph color="subdued">
-                        No reward products yet
-                      </s-paragraph>
-                    )}
-                  </>
-                ) : null}
-
-                <s-divider></s-divider>
-
-                <s-stack direction="inline" gap="base" alignItems="center">
-                  <s-text>Offer</s-text>
-                  <s-text type="strong">{formatFormDiscount(form)}</s-text>
-                </s-stack>
-                <s-stack direction="inline" gap="base" alignItems="center">
-                  <s-text color="subdued">Status</s-text>
-                  <s-badge
-                    tone={form.status === "active" ? "success" : "neutral"}
-                  >
-                    {form.status === "active" ? "Active" : "Draft"}
-                  </s-badge>
-                </s-stack>
+                <s-text type="strong">{formatFormDiscount(form)}</s-text>
+                <s-badge tone={form.status === "active" ? "success" : "neutral"}>
+                  {form.status === "active" ? "Active" : "Draft"}
+                </s-badge>
               </s-stack>
-            </s-box>
+            </s-stack>
           </s-section>
         </s-grid-item>
       </s-grid>

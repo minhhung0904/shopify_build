@@ -111,9 +111,10 @@
     font-size: 1.5rem;
   }
 
+  /* Non-active items: on hover the black label turns the theme's main color. */
   .header__menu-item:hover span {
     text-decoration: none !important;
-    color: #111111;
+    color: #E8B600;
   }
 
   /* Active / current item = solid yellow pill, dark text, no underline. */
@@ -123,8 +124,9 @@
     text-decoration: none !important;
   }
 
+  /* Active pill keeps its dark label on hover (don't recolor it). */
   .header__menu-item:hover .header__active-menu-item {
-    color: #ffffff !important;
+    color: #1A1A1A !important;
   }
 </style>
 

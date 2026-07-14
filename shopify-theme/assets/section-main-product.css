@@ -191,6 +191,22 @@ product-info {
 
 .product-form__submit {
   margin-bottom: 1rem;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+/* Match the bundle "ADD TO CART" hover (snippets/bundle-picker-css.liquid
+   .bp-card__submit): darken the button on hover instead of Dawn's default
+   growing border-ring, so the product-detail and bundle buttons behave
+   identically. The ::after suppression cancels the ring effect. */
+.product-form__submit:not([disabled]):hover {
+  filter: brightness(0.94);
+}
+.product-form__submit:not([disabled]):hover::after {
+  box-shadow: 0 0 0 var(--buttons-border-width) rgba(var(--color-button-text), var(--border-opacity)),
+    0 0 0 var(--buttons-border-width) rgba(var(--color-button), var(--alpha-button-background));
+}
+.product-form__submit:not([disabled]):active {
+  transform: translateY(1px);
 }
 
 .product-form__submit[aria-disabled='true'] + .shopify-payment-button .shopify-payment-button__button[disabled],

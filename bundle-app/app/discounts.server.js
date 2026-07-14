@@ -1,5 +1,64 @@
 const BUNDLE_DISCOUNT_TITLE = "Bundle discounts";
 
+// Registers the app's Cart Transform function on the shop so bundles whose
+// container variant is set are actually merged into one cart line at checkout.
+// Unlike discounts, a cart transform only runs once activated with
+// cartTransformCreate. Idempotent + never throws (mirrors
+// activateBundleDiscount): safe to call on every auth and on app load.
+export async function activateBundleCartTransform(admin) {
+  try {
+    const functionsResponse = await admin.graphql(
+      `#graphql
+        query BundleCartTransformFunctions {
+          shopifyFunctions(first: 25) {
+            nodes {
+              id
+              apiType
+            }
+          }
+        }`,
+    );
+    const functionsJson = await functionsResponse.json();
+    const transformFunction = (
+      functionsJson.data?.shopifyFunctions?.nodes || []
+    ).find((node) => node.apiType === "cart_transform");
+    if (!transformFunction) return;
+
+    const existingResponse = await admin.graphql(
+      `#graphql
+        query ExistingCartTransform {
+          cartTransforms(first: 10) {
+            nodes { id functionId }
+          }
+        }`,
+    );
+    const existingJson = await existingResponse.json();
+    const alreadyActive = (
+      existingJson.data?.cartTransforms?.nodes || []
+    ).some((node) => node.functionId === transformFunction.id);
+    if (alreadyActive) return;
+
+    const createResponse = await admin.graphql(
+      `#graphql
+        mutation ActivateBundleCartTransform($functionId: String!) {
+          cartTransformCreate(functionId: $functionId, blockOnFailure: false) {
+            cartTransform { id }
+            userErrors { field message }
+          }
+        }`,
+      { variables: { functionId: transformFunction.id } },
+    );
+    const createJson = await createResponse.json();
+    const userErrors =
+      createJson.data?.cartTransformCreate?.userErrors || [];
+    if (userErrors.length) {
+      console.error("cartTransformCreate userErrors", userErrors);
+    }
+  } catch (error) {
+    console.error("Failed to activate bundle cart transform function", error);
+  }
+}
+
 // Activates the app's discount function as an automatic discount so bundle
 // prices configured in the admin are actually enforced at checkout, not just
 // displayed. Runs after every OAuth grant (install + re-auth on scope

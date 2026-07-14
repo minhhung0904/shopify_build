@@ -5,7 +5,10 @@ import {
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
 import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mongodb";
-import { activateBundleDiscount } from "./discounts.server";
+import {
+  activateBundleDiscount,
+  activateBundleCartTransform,
+} from "./discounts.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -22,6 +25,7 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ admin }) => {
       await activateBundleDiscount(admin);
+      await activateBundleCartTransform(admin);
     },
   },
   future: {
