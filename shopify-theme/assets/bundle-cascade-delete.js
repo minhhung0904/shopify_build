@@ -20,6 +20,17 @@
     return row?.id.match(/-(\d+)$/)?.[1];
   }
 
+  // Inner HTML of a rendered section, matching Dawn's global helper when it's
+  // present and falling back to a local parse otherwise.
+  function sectionInnerHTML(html, selector) {
+    if (typeof getSectionInnerHTML === 'function') {
+      return getSectionInnerHTML(html, selector);
+    }
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const el = parsed.querySelector(selector);
+    return el ? el.innerHTML : html;
+  }
+
   document.addEventListener(
     'click',
     function (event) {
@@ -53,22 +64,69 @@
 
       if (mainIndex) cartItems.enableLoading(mainIndex);
 
+      // Sections to re-render after the removals. Crucially this includes
+      // 'cart-icon-bubble', so the header cart-count badge updates immediately
+      // instead of staying stale until a manual page refresh (F5).
+      const sections =
+        typeof cartItems.getSectionsToRender === 'function'
+          ? cartItems.getSectionsToRender()
+          : [];
+
       // One at a time, not Promise.all: concurrent /cart/change.js calls
       // against the same cart session can race each other server-side (one
       // can 400 because another write landed first). Awaiting each in turn
-      // keeps every removal reliable at the cost of a few hundred ms.
+      // keeps every removal reliable at the cost of a few hundred ms. Only the
+      // LAST call asks for the rendered sections (the final cart state).
       keys
         .reduce(
-          (chain, id) =>
-            chain.then(() =>
-              fetch(window.routes.cart_change_url, {
+          (chain, id, i) =>
+            chain.then(() => {
+              const body = { id, quantity: 0 };
+              if (i === keys.length - 1 && sections.length) {
+                body.sections = sections.map((section) => section.section);
+                body.sections_url = window.location.pathname;
+              }
+              return fetch(window.routes.cart_change_url, {
                 ...fetchConfig(),
-                body: JSON.stringify({ id, quantity: 0 }),
-              }),
-            ),
+                body: JSON.stringify(body),
+              }).then((response) => response.text());
+            }),
           Promise.resolve(),
         )
-        .then(() => cartItems.onCartUpdate())
+        .then((lastState) => {
+          let parsed = null;
+          try {
+            parsed = JSON.parse(lastState);
+          } catch (error) {
+            parsed = null;
+          }
+
+          if (!parsed || !parsed.sections) {
+            // Fallback: at least refresh the visible item list.
+            if (typeof cartItems.onCartUpdate === 'function') cartItems.onCartUpdate();
+            return;
+          }
+
+          // Mirror Dawn's updateQuantity: toggle the empty state on the cart
+          // wrappers and swap in every re-rendered section (item list, footer,
+          // header count bubble, live region).
+          const isEmpty = parsed.item_count === 0;
+          [
+            cartItems,
+            document.getElementById('main-cart-footer'),
+            document.querySelector('cart-drawer'),
+          ].forEach((el) => el && el.classList.toggle('is-empty', isEmpty));
+
+          sections.forEach((section) => {
+            const container = document.getElementById(section.id);
+            if (!container || parsed.sections[section.section] == null) return;
+            const target = container.querySelector(section.selector) || container;
+            target.innerHTML = sectionInnerHTML(
+              parsed.sections[section.section],
+              section.selector,
+            );
+          });
+        })
         .catch(() => window.location.reload())
         .finally(() => {
           if (mainIndex) cartItems.disableLoading(mainIndex);

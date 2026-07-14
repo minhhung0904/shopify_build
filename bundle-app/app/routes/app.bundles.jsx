@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import { useLoaderData, useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { deactivateBundleCartTransform } from "../discounts.server";
+import {
+  activateBundleDiscount,
+  deactivateBundleCartTransform,
+} from "../discounts.server";
 
 // Single source of truth for the bundle types the app supports. Each entry
 // declares which form sections it needs so the UI, the index sync, and the
@@ -152,8 +155,11 @@ const BUNDLE_FIELDS = `#graphql
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
-  // Ensure no leftover cart transform is registered (merge feature removed) so
-  // bundles stay as separate discounted lines. Idempotent and non-throwing.
+  // Self-heal for already-installed shops (afterAuth only runs on install/
+  // re-auth): make sure the bundle discount function is active so cart prices
+  // match the widget, and no leftover cart transform is registered. Both are
+  // idempotent and non-throwing.
+  await activateBundleDiscount(admin);
   await deactivateBundleCartTransform(admin);
 
   const response = await admin.graphql(

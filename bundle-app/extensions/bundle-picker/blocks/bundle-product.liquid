@@ -61,9 +61,6 @@
 
   <div class="bundle-picker-{{ block.id }} bpp" {{ block.shopify_attributes }}>
     <div class="bpp-inner">
-      {%- if block.settings.heading != blank -%}
-        <h2 class="bpp-title">{{ block.settings.heading }}</h2>
-      {%- endif -%}
       {%- render 'bundle-form',
         block_id: block.id,
         handle: matched.handle,
