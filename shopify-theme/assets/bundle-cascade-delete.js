@@ -53,14 +53,21 @@
 
       if (mainIndex) cartItems.enableLoading(mainIndex);
 
-      Promise.all(
-        keys.map((id) =>
-          fetch(window.routes.cart_change_url, {
-            ...fetchConfig(),
-            body: JSON.stringify({ id, quantity: 0 }),
-          }),
-        ),
-      )
+      // One at a time, not Promise.all: concurrent /cart/change.js calls
+      // against the same cart session can race each other server-side (one
+      // can 400 because another write landed first). Awaiting each in turn
+      // keeps every removal reliable at the cost of a few hundred ms.
+      keys
+        .reduce(
+          (chain, id) =>
+            chain.then(() =>
+              fetch(window.routes.cart_change_url, {
+                ...fetchConfig(),
+                body: JSON.stringify({ id, quantity: 0 }),
+              }),
+            ),
+          Promise.resolve(),
+        )
         .then(() => cartItems.onCartUpdate())
         .catch(() => window.location.reload())
         .finally(() => {

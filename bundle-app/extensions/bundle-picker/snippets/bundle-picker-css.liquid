@@ -189,6 +189,9 @@
     overflow: visible; box-shadow: 0 0 0 2px transparent; transition: box-shadow 0.15s ease;
   }
   .bundle-picker-{{ scope }} .bp-tier2.is-selected { box-shadow: 0 0 0 3px var(--bp-blue); }
+  /* Room above the card for the ribbon badge, so it never has to overlap
+     the title/price text or the card above it to stay visible. */
+  .bundle-picker-{{ scope }} .bp-tier2.is-popular { margin-top: 3rem; }
   .bundle-picker-{{ scope }} .bp-tier2__head { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; }
   .bundle-picker-{{ scope }} .bp-tier2__radio { width: 1.9rem; height: 1.9rem; flex: 0 0 auto; accent-color: var(--bp-blue); }
   .bundle-picker-{{ scope }} .bp-tier2__info { display: flex; flex-direction: column; gap: 0.2rem; flex: 1 1 auto; min-width: 0; }
@@ -199,8 +202,11 @@
   .bundle-picker-{{ scope }} .bp-tier2__now { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--bp-card-text); }
   .bundle-picker-{{ scope }} .bp-tier2__was { font-size: 1.25rem; color: var(--bp-muted); }
   .bundle-picker-{{ scope }} .bp-tier2__ribbon {
-    position: absolute; top: -1rem; right: -0.8rem; z-index: 2;
-    width: 8.4rem; height: auto; display: block; pointer-events: none;
+    /* Pinned to the popular card's corner (small overlap onto it reads as
+       "attached"), while staying short enough — see .is-popular's
+       margin-top — to never reach the title/price text or the card above. */
+    position: absolute; bottom: 100%; right: 1rem; margin-bottom: -0.6rem; z-index: 2;
+    width: 6rem; height: auto; display: block; pointer-events: none;
     filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
   }
   .bundle-picker-{{ scope }} .bp-tier2__body[hidden] { display: none; }

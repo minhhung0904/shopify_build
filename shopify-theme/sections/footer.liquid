@@ -175,12 +175,22 @@
 
               .footer-block__newsletter {
                 width: 100%;
-                max-width: 60rem;
+                /* 2/3 of the Contact page's Send button width (.page-width--narrow
+                   maxes out at 72.6rem on desktop, and that button is full-width). */
+                max-width: 48.4rem;
                 margin: 0 auto;
                 text-align: center;
               }
 
+              .footer-block__newsletter .footer-block__subtext {
+                margin: -0.8rem 0 1.8rem;
+                color: #ffffff;
+                text-align: center;
+                opacity: 0.85;
+              }
+
               .footer-block__newsletter .footer-block__heading {
+                color: #ffffff;
                 text-align: center;
               }
 
@@ -308,6 +318,9 @@
             <div class="footer-block__newsletter">
               {%- if section.settings.newsletter_heading != blank -%}
                 <h2 class="footer-block__heading inline-richtext">{{ section.settings.newsletter_heading }}</h2>
+              {%- endif -%}
+              {%- if section.settings.newsletter_subtext != blank -%}
+                <div class="footer-block__subtext rte">{{ section.settings.newsletter_subtext }}</div>
               {%- endif -%}
               {%- form 'customer', id: 'ContactFooter', class: 'footer__newsletter newsletter-form' -%}
                 <input type="hidden" name="contact[tags]" value="newsletter">
@@ -583,6 +596,12 @@
       "id": "newsletter_heading",
       "default": "t:sections.footer.settings.newsletter_heading.default",
       "label": "t:sections.footer.settings.newsletter_heading.label"
+    },
+    {
+      "type": "richtext",
+      "id": "newsletter_subtext",
+      "default": "<p>Be the first to know about new drops, exclusive deals, and Pokémon-themed surprises.</p>",
+      "label": "Subheading"
     },
     {
       "type": "header",

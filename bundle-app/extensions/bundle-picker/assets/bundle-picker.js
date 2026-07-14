@@ -66,6 +66,12 @@ function addBundleToCart({ lines, bundleHandle, bundleTitle, cartAddUrl, cartUrl
         throw new Error(message);
       }
       if (cartDrawer && typeof cartDrawer.renderContents === 'function') {
+        // renderContents() only refreshes the drawer's inner sections — it
+        // doesn't know to drop the drawer's own `is-empty` class, which the
+        // theme's CSS uses to collapse/hide the item list. Left stale (the
+        // cart was empty before this add), the drawer opens with a price
+        // total in the footer but no visible line items.
+        cartDrawer.classList.remove('is-empty');
         cartDrawer.renderContents(data);
         submitBtn.removeAttribute('disabled');
       } else {
