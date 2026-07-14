@@ -7,7 +7,7 @@ import {
 import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mongodb";
 import {
   activateBundleDiscount,
-  activateBundleCartTransform,
+  deactivateBundleCartTransform,
 } from "./discounts.server";
 
 const shopify = shopifyApp({
@@ -25,7 +25,7 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ admin }) => {
       await activateBundleDiscount(admin);
-      await activateBundleCartTransform(admin);
+      await deactivateBundleCartTransform(admin);
     },
   },
   future: {

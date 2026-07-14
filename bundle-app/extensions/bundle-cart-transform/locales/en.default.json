@@ -1,4 +1,0 @@
-{
-  "name": "Bundle cart merge",
-  "description": "Merges a bundle's component lines into one cart line at their combined price."
-}

@@ -1,61 +1,42 @@
 const BUNDLE_DISCOUNT_TITLE = "Bundle discounts";
 
-// Registers the app's Cart Transform function on the shop so bundles whose
-// container variant is set are actually merged into one cart line at checkout.
-// Unlike discounts, a cart transform only runs once activated with
-// cartTransformCreate. Idempotent + never throws (mirrors
-// activateBundleDiscount): safe to call on every auth and on app load.
-export async function activateBundleCartTransform(admin) {
+// Removes any cart transform this app registered on the shop, so bundles add
+// as separate line items discounted by the discount function (the daveslamps /
+// Kaching architecture) rather than being merged into one line. Idempotent +
+// never throws: safe to call on every auth and on app load. Kept as a cleanup
+// after the merge feature was removed.
+export async function deactivateBundleCartTransform(admin) {
   try {
-    const functionsResponse = await admin.graphql(
-      `#graphql
-        query BundleCartTransformFunctions {
-          shopifyFunctions(first: 25) {
-            nodes {
-              id
-              apiType
-            }
-          }
-        }`,
-    );
-    const functionsJson = await functionsResponse.json();
-    const transformFunction = (
-      functionsJson.data?.shopifyFunctions?.nodes || []
-    ).find((node) => node.apiType === "cart_transform");
-    if (!transformFunction) return;
-
     const existingResponse = await admin.graphql(
       `#graphql
-        query ExistingCartTransform {
-          cartTransforms(first: 10) {
-            nodes { id functionId }
+        query ExistingCartTransforms {
+          cartTransforms(first: 50) {
+            nodes { id }
           }
         }`,
     );
     const existingJson = await existingResponse.json();
-    const alreadyActive = (
-      existingJson.data?.cartTransforms?.nodes || []
-    ).some((node) => node.functionId === transformFunction.id);
-    if (alreadyActive) return;
-
-    const createResponse = await admin.graphql(
-      `#graphql
-        mutation ActivateBundleCartTransform($functionId: String!) {
-          cartTransformCreate(functionId: $functionId, blockOnFailure: false) {
-            cartTransform { id }
-            userErrors { field message }
-          }
-        }`,
-      { variables: { functionId: transformFunction.id } },
-    );
-    const createJson = await createResponse.json();
-    const userErrors =
-      createJson.data?.cartTransformCreate?.userErrors || [];
-    if (userErrors.length) {
-      console.error("cartTransformCreate userErrors", userErrors);
+    const nodes = existingJson.data?.cartTransforms?.nodes || [];
+    for (const node of nodes) {
+      const deleteResponse = await admin.graphql(
+        `#graphql
+          mutation DeleteBundleCartTransform($id: ID!) {
+            cartTransformDelete(id: $id) {
+              deletedId
+              userErrors { field message }
+            }
+          }`,
+        { variables: { id: node.id } },
+      );
+      const deleteJson = await deleteResponse.json();
+      const userErrors =
+        deleteJson.data?.cartTransformDelete?.userErrors || [];
+      if (userErrors.length) {
+        console.error("cartTransformDelete userErrors", userErrors);
+      }
     }
   } catch (error) {
-    console.error("Failed to activate bundle cart transform function", error);
+    console.error("Failed to deactivate bundle cart transform", error);
   }
 }
 

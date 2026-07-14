@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLoaderData, useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { activateBundleCartTransform } from "../discounts.server";
+import { deactivateBundleCartTransform } from "../discounts.server";
 
 // Single source of truth for the bundle types the app supports. Each entry
 // declares which form sections it needs so the UI, the index sync, and the
@@ -101,9 +101,6 @@ const emptyForm = {
   status: "active",
   sortOrder: "0",
   accentColor: "#FFCB05",
-  // Cart Transform "container" variant: the parent line a merged bundle folds
-  // into. Null = the bundle is NOT merged into one cart line.
-  containerVariant: null,
   selectedProducts: [],
   volumeTiers: [{ minQuantity: "2", discountType: "percentage", value: "10" }],
   // multipack
@@ -155,9 +152,9 @@ const BUNDLE_FIELDS = `#graphql
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
-  // Self-heal activation for already-installed shops (afterAuth only runs on
-  // install/re-auth). Idempotent and non-throwing.
-  await activateBundleCartTransform(admin);
+  // Ensure no leftover cart transform is registered (merge feature removed) so
+  // bundles stay as separate discounted lines. Idempotent and non-throwing.
+  await deactivateBundleCartTransform(admin);
 
   const response = await admin.graphql(
     `#graphql
@@ -193,10 +190,6 @@ function buildIndexEntry(node) {
     config = {};
   }
 
-  // The "container" variant a Cart Transform merge uses as the parent line for
-  // this bundle (see bundle-cart-transform). Undefined = bundle isn't merged.
-  const parentVariantId = config.parentVariantId || undefined;
-
   if (type === "volume") {
     let volumeTiers = [];
     try {
@@ -204,7 +197,7 @@ function buildIndexEntry(node) {
     } catch {
       volumeTiers = [];
     }
-    return { type, productId: productIds[0], productIds, volumeTiers, parentVariantId };
+    return { type, productId: productIds[0], productIds, volumeTiers };
   }
 
   if (type === "tiered") {
@@ -221,7 +214,6 @@ function buildIndexEntry(node) {
       addOnProductIds: rewardIds,
       addOnDiscountType: config.addOnDiscountType || "percentage",
       addOnDiscountValue: Number(config.addOnDiscountValue || 0),
-      parentVariantId,
     };
   }
 
@@ -234,7 +226,6 @@ function buildIndexEntry(node) {
       getQuantity: Number(config.getQuantity || 1),
       rewardDiscountType: config.rewardDiscountType || "percentage",
       rewardDiscountValue: Number(config.rewardDiscountValue || 0),
-      parentVariantId,
     };
   }
 
@@ -243,7 +234,6 @@ function buildIndexEntry(node) {
     productIds,
     discountType: node.discountType?.value,
     discountValue: Number(node.discountValue?.value || 0),
-    parentVariantId,
   };
 
   if (type === "multipack") {
@@ -796,9 +786,6 @@ export default function Bundles() {
       status: bundle.status?.value || "active",
       sortOrder: bundle.sortOrder?.value || "0",
       accentColor: config.accentColor || emptyForm.accentColor,
-      containerVariant: config.parentVariantId
-        ? { id: config.parentVariantId, title: config.parentVariantTitle || "Selected variant" }
-        : null,
       selectedProducts: (bundle.products?.references?.nodes || []).map((p) => ({
         id: p.id,
         title: p.title,
@@ -873,31 +860,6 @@ export default function Bundles() {
     }
   };
 
-  // Picks the single "container" variant that a Cart Transform merge uses as
-  // the parent line so the whole bundle shows as one cart item.
-  const pickContainerVariant = async () => {
-    const selected = await shopify.resourcePicker({
-      type: "variant",
-      multiple: false,
-      selectionIds: form.containerVariant ? [{ id: form.containerVariant.id }] : [],
-    });
-    if (selected && selected[0]) {
-      const v = selected[0];
-      setForm((prev) => ({
-        ...prev,
-        containerVariant: {
-          id: v.id,
-          title: [v.product?.title || v.displayName, v.title]
-            .filter(Boolean)
-            .join(" · "),
-        },
-      }));
-    }
-  };
-
-  const clearContainerVariant = () =>
-    setForm((prev) => ({ ...prev, containerVariant: null }));
-
   const addTierRow = () =>
     setForm((prev) => ({
       ...prev,
@@ -963,14 +925,6 @@ export default function Bundles() {
       productHandles: form.selectedProducts.map((p) => p.handle).filter(Boolean),
       addOnHandles: form.rewardProducts.map((p) => p.handle).filter(Boolean),
       accentColor: form.accentColor,
-      // Cart Transform container variant (see bundle-cart-transform). Stored in
-      // config so it syncs into $app:bundle_index via buildIndexEntry.
-      ...(form.containerVariant
-        ? {
-            parentVariantId: form.containerVariant.id,
-            parentVariantTitle: form.containerVariant.title,
-          }
-        : {}),
     };
     if (form.bundleType === "multipack") {
       return { ...base, packSize: Number(form.packSize) || 1 };
@@ -1572,30 +1526,6 @@ export default function Bundles() {
                 ? form.selectedProducts.map((p) => p.title).join(", ")
                 : "No products selected"}
             </s-text>
-          </s-stack>
-
-          <s-stack direction="block" gap="small-300">
-            <s-text type="strong">Merge into one cart line (optional)</s-text>
-            <s-paragraph color="subdued">
-              Pick a “container” product variant to represent this bundle. When
-              set, the bundle’s items are merged into a single cart line at the
-              bundle total (Cart Transform). Leave empty to keep separate lines.
-            </s-paragraph>
-            <s-stack direction="inline" gap="base" alignItems="center">
-              <s-button onClick={pickContainerVariant}>
-                {form.containerVariant ? "Change container variant" : "Choose container variant"}
-              </s-button>
-              <s-text>
-                {form.containerVariant
-                  ? form.containerVariant.title
-                  : "Not merged (separate lines)"}
-              </s-text>
-              {form.containerVariant ? (
-                <s-button variant="tertiary" tone="critical" onClick={clearContainerVariant}>
-                  Clear
-                </s-button>
-              ) : null}
-            </s-stack>
           </s-stack>
 
           <s-stack direction="inline" gap="base">
