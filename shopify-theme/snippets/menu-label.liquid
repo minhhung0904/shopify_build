@@ -1,0 +1,17 @@
+{%- comment -%}
+  Translates a navigation link's label so the header follows the store language,
+  even though the menu itself is admin content (its titles don't switch with the
+  language). Matches the known Vietnamese/English labels and outputs the
+  translated string; anything not in the map falls back to the original title.
+
+  Edit the wording in locales/*.json under sections.header.nav_* .
+
+  Param: title (the menu link's title)
+{%- endcomment -%}
+{%- assign _label = title | strip | downcase -%}
+{%- case _label -%}
+  {%- when 'trang chủ', 'trang chu', 'home' -%}{{ 'sections.header.nav_home' | t }}
+  {%- when 'danh mục', 'danh muc', 'catalog', 'sản phẩm', 'san pham', 'products' -%}{{ 'sections.header.nav_catalog' | t }}
+  {%- when 'liên hệ', 'lien he', 'contact' -%}{{ 'sections.header.nav_contact' | t }}
+  {%- else -%}{{ title | escape }}
+{%- endcase -%}

@@ -279,6 +279,9 @@
     "header": {
       "announcement": "Announcement",
       "menu": "Menu",
+      "nav_home": "Home",
+      "nav_catalog": "Catalog",
+      "nav_contact": "Contact",
       "cart_count": {
         "one": "{{ count }} item",
         "other": "{{ count }} items"
