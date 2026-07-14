@@ -101,18 +101,27 @@
   .bundle-picker-{{ scope }} .bp-card__submit {
     width: 100%;
     padding: 1.2rem 1.6rem;
-    border: none;
+    border: 2px solid var(--bp-accent);
     border-radius: 4px;
-    background: var(--bp-accent);
+    /* Two white layers pinned to the left & right edges, 0-width by default.
+       On hover they each grow to ~half the width, so white sweeps in from both
+       sides to meet in the middle. Accent stays as the base background. */
+    background:
+      linear-gradient(#ffffff, #ffffff) left center / 0 100% no-repeat,
+      linear-gradient(#ffffff, #ffffff) right center / 0 100% no-repeat,
+      var(--bp-accent);
     color: #ffffff;
     font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: filter 0.15s ease, transform 0.05s ease;
+    transition: background-size 0.35s ease, color 0.35s ease, transform 0.05s ease;
   }
-  .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled) { filter: brightness(0.94); }
+  .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled) {
+    background-size: 50.5% 100%, 50.5% 100%;
+    color: var(--bp-accent);
+  }
   .bundle-picker-{{ scope }} .bp-card__submit:active:not(:disabled) { transform: translateY(1px); }
   .bundle-picker-{{ scope }} .bp-card__submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -180,7 +189,9 @@
   .bundle-picker-{{ scope }} .bp-tier.is-active { background: var(--bp-accent); color: #ffffff; font-weight: 700; }
 
   /* Tiered offer rows */
-  .bundle-picker-{{ scope }} .bp-tierlist { list-style: none; margin: 0 0 1.2rem; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
+  /* Small top margin gives a first-tier "Most popular" ribbon room to poke out
+     without being clipped; the gap between tiers stays constant at 1rem. */
+  .bundle-picker-{{ scope }} .bp-tierlist { list-style: none; margin: 0.8rem 0 1.2rem; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
   .bundle-picker-{{ scope }} .bp-tier2 {
     --bp-blue: var(--bp-highlight);
     position: relative; border-radius: 1rem;
@@ -189,9 +200,8 @@
     overflow: visible; box-shadow: 0 0 0 2px transparent; transition: box-shadow 0.15s ease;
   }
   .bundle-picker-{{ scope }} .bp-tier2.is-selected { box-shadow: 0 0 0 3px var(--bp-blue); }
-  /* Room above the card for the ribbon badge, so it never has to overlap
-     the title/price text or the card above it to stay visible. */
-  .bundle-picker-{{ scope }} .bp-tier2.is-popular { margin-top: 3rem; }
+  /* The ribbon now sits on the card's right edge (see .bp-tier2__ribbon), so
+     tiers no longer need extra top room — every tier keeps the same gap. */
   .bundle-picker-{{ scope }} .bp-tier2__head { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; cursor: pointer; }
   .bundle-picker-{{ scope }} .bp-tier2__radio { width: 1.9rem; height: 1.9rem; flex: 0 0 auto; accent-color: var(--bp-blue); }
   .bundle-picker-{{ scope }} .bp-tier2__info { display: flex; flex-direction: column; gap: 0.2rem; flex: 1 1 auto; min-width: 0; }
@@ -202,11 +212,10 @@
   .bundle-picker-{{ scope }} .bp-tier2__now { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--bp-card-text); }
   .bundle-picker-{{ scope }} .bp-tier2__was { font-size: 1.25rem; color: var(--bp-muted); }
   .bundle-picker-{{ scope }} .bp-tier2__ribbon {
-    /* Pinned to the popular card's corner (small overlap onto it reads as
-       "attached"), while staying short enough — see .is-popular's
-       margin-top — to never reach the title/price text or the card above. */
-    position: absolute; bottom: 100%; right: 1rem; margin-bottom: -0.6rem; z-index: 2;
-    width: 6rem; height: auto; display: block; pointer-events: none;
+    /* Sits on the card's top-right corner and pokes out to the right, so it
+       never pushes the tier spacing around. Slightly larger for emphasis. */
+    position: absolute; top: -0.8rem; right: -0.8rem; z-index: 2;
+    width: 7.5rem; height: auto; display: block; pointer-events: none;
     filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
   }
   .bundle-picker-{{ scope }} .bp-tier2__body[hidden] { display: none; }

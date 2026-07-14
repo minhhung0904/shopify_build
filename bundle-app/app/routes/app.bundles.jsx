@@ -161,6 +161,9 @@ export const loader = async ({ request }) => {
   // idempotent and non-throwing.
   await activateBundleDiscount(admin);
   await deactivateBundleCartTransform(admin);
+  // Backfill config.handle for bundles saved before that field existed, so the
+  // storefront can send the correct `_bundle_handle`.
+  await backfillBundleConfigHandles(admin);
 
   const response = await admin.graphql(
     `#graphql
@@ -180,6 +183,54 @@ export const loader = async ({ request }) => {
   });
   return { bundles };
 };
+
+// Ensures every bundle's config JSON carries its own handle, so the theme
+// (which can't read an app-owned metaobject's handle) can send the right
+// `_bundle_handle`. Idempotent + never throws; only writes bundles that need it.
+async function backfillBundleConfigHandles(admin) {
+  try {
+    const resp = await admin.graphql(
+      `#graphql
+        query BackfillBundles {
+          metaobjects(type: "$app:bundle", first: 50) {
+            nodes {
+              id
+              handle
+              config: field(key: "config") { value }
+            }
+          }
+        }`,
+    );
+    const json = await resp.json();
+    const nodes = json.data?.metaobjects?.nodes || [];
+    for (const node of nodes) {
+      let config = {};
+      try {
+        config = JSON.parse(node.config?.value || "{}");
+      } catch {
+        config = {};
+      }
+      if (config.handle === node.handle) continue;
+      config.handle = node.handle;
+      await admin.graphql(
+        `#graphql
+          mutation BackfillBundleHandle($id: ID!, $fields: [MetaobjectFieldInput!]!) {
+            metaobjectUpdate(id: $id, metaobject: { fields: $fields }) {
+              userErrors { field message }
+            }
+          }`,
+        {
+          variables: {
+            id: node.id,
+            fields: [{ key: "config", value: JSON.stringify(config) }],
+          },
+        },
+      );
+    }
+  } catch (error) {
+    console.error("Failed to backfill bundle config handles", error);
+  }
+}
 
 // Reduces one metaobject node down to the minimal, storefront-tamper-proof
 // config the discount function needs. Mirrors the type list in BUNDLE_TYPES.
@@ -368,6 +419,11 @@ export const action = async ({ request }) => {
   const productIds = JSON.parse(formData.get("productIds") || "[]");
   const rewardProductIds = JSON.parse(formData.get("rewardProductIds") || "[]");
   const config = JSON.parse(formData.get("config") || "{}");
+  // Store the bundle's own handle inside config: app-owned metaobjects DON'T
+  // expose their handle to storefront Liquid (matched.handle /
+  // matched.system.handle are blank), so the theme reads config.handle to send
+  // `_bundle_handle` — the key the discount function looks the bundle up by.
+  config.handle = handle;
 
   const fields = [
     { key: "title", value: title },

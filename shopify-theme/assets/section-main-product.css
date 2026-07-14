@@ -189,21 +189,25 @@ product-info {
   right: 1.5rem;
 }
 
+/* Match the bundle "ADD TO CART" hover (snippets/bundle-picker-css.liquid
+   .bp-card__submit): on hover a white fill sweeps in from both edges to the
+   middle, the background turns white and the label turns the theme's main
+   color. Dawn's growing border-ring (::after) is disabled so only the sweep
+   shows. */
 .product-form__submit {
   margin-bottom: 1rem;
-  transition: filter 0.15s ease, transform 0.05s ease;
+  background:
+    linear-gradient(#ffffff, #ffffff) left center / 0 100% no-repeat,
+    linear-gradient(#ffffff, #ffffff) right center / 0 100% no-repeat,
+    rgb(var(--color-button));
+  transition: background-size 0.35s ease, color 0.35s ease, transform 0.05s ease;
 }
-
-/* Match the bundle "ADD TO CART" hover (snippets/bundle-picker-css.liquid
-   .bp-card__submit): darken the button on hover instead of Dawn's default
-   growing border-ring, so the product-detail and bundle buttons behave
-   identically. The ::after suppression cancels the ring effect. */
+.product-form__submit::after {
+  display: none;
+}
 .product-form__submit:not([disabled]):hover {
-  filter: brightness(0.94);
-}
-.product-form__submit:not([disabled]):hover::after {
-  box-shadow: 0 0 0 var(--buttons-border-width) rgba(var(--color-button-text), var(--border-opacity)),
-    0 0 0 var(--buttons-border-width) rgba(var(--color-button), var(--alpha-button-background));
+  background-size: 50.5% 100%, 50.5% 100%;
+  color: #e8b600;
 }
 .product-form__submit:not([disabled]):active {
   transform: translateY(1px);
