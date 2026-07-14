@@ -9,9 +9,9 @@
             "background": "#FFFFFF",
             "background_gradient": "",
             "text": "#000000",
-            "button": "#F58220",
-            "button_label": "#FFFFFF",
-            "secondary_button_label": "#F58220",
+            "button": "#E8B600",
+            "button_label": "#1A1A1A",
+            "secondary_button_label": "#A67C00",
             "shadow": "#000000"
           }
         },
@@ -20,8 +20,8 @@
             "background": "#F3F3F3",
             "background_gradient": "",
             "text": "#000000",
-            "button": "#F58220",
-            "button_label": "#FFFFFF",
+            "button": "#E8B600",
+            "button_label": "#1A1A1A",
             "secondary_button_label": "#000000",
             "shadow": "#000000"
           }
@@ -31,8 +31,8 @@
             "background": "#6D388B",
             "background_gradient": "linear-gradient(54deg, rgba(109, 56, 139, 1) 14%, rgba(105, 14, 14, 1) 85%)",
             "text": "#FFFFFF",
-            "button": "#F58220",
-            "button_label": "#FFFFFF",
+            "button": "#E8B600",
+            "button_label": "#1A1A1A",
             "secondary_button_label": "#FFFFFF",
             "shadow": "#000000"
           }
@@ -50,12 +50,12 @@
         },
         "scheme-5": {
           "settings": {
-            "background": "#F58220",
+            "background": "#E8B600",
             "background_gradient": "",
-            "text": "#FFFFFF",
-            "button": "#FFFFFF",
-            "button_label": "#F58220",
-            "secondary_button_label": "#FFFFFF",
+            "text": "#1A1A1A",
+            "button": "#1A1A1A",
+            "button_label": "#E8B600",
+            "secondary_button_label": "#1A1A1A",
             "shadow": "#000000"
           }
         }

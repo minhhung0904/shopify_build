@@ -21,11 +21,13 @@
 {%- endfor -%}
 
 {%- if matched -%}
+  {%- assign matched_config = matched.config.value -%}
+  {%- assign bundle_accent = matched_config.accentColor | default: block.settings.accent_color -%}
   {%- render 'bundle-picker-css',
     scope: block.id,
     bg: block.settings.background_color,
     text: block.settings.text_color,
-    accent: block.settings.accent_color,
+    accent: bundle_accent,
     card_bg: block.settings.card_background_color,
     card_text: block.settings.card_text_color,
     highlight: block.settings.highlight_color,
@@ -141,7 +143,7 @@
       "type": "color",
       "id": "accent_color",
       "label": "Button / accent color",
-      "default": "#f58220"
+      "default": "#E8B600"
     },
     {
       "type": "color",

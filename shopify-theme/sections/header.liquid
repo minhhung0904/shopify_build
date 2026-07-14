@@ -116,10 +116,10 @@
     color: #111111;
   }
 
-  /* Active / current item = solid orange pill, white text, no underline. */
+  /* Active / current item = solid yellow pill, dark text, no underline. */
   .header__active-menu-item {
-    background: #f58220;
-    color: #ffffff !important;
+    background: #E8B600;
+    color: #1A1A1A !important;
     text-decoration: none !important;
   }
 
@@ -228,7 +228,7 @@
             src="{{ 'logo-poke-style.png' | asset_url }}"
             alt="{{ shop.name | escape }}"
             class="header__heading-logo"
-            style="width: auto; height: auto; max-height: 60px;"
+            style="width: auto; height: auto; max-height: 110px;"
             loading="eager"
           >
         {%- endif -%}
@@ -277,7 +277,7 @@
             src="{{ 'logo-poke-style.png' | asset_url }}"
             alt="{{ shop.name | escape }}"
             class="header__heading-logo"
-            style="width: auto; height: auto; max-height: 60px;"
+            style="width: auto; height: auto; max-height: 110px;"
             loading="eager"
           >
         {%- endif -%}

@@ -272,7 +272,7 @@
                 {%- else -%}
                   {%- assign vimg_json = 'null' -%}
                 {%- endif -%}
-                {"id":{{ v.id }},"title":{{ v.title | json }},"price":{{ v.price }},"available":{{ v.available }},"image":{{ vimg_json }}}{%- unless forloop.last -%},{%- endunless -%}
+                {"id":{{ v.id }},"title":{{ v.title | json }},"price":{{ v.price }},"compareAtPrice":{{ v.compare_at_price | default: 0 }},"available":{{ v.available }},"image":{{ vimg_json }}}{%- unless forloop.last -%},{%- endunless -%}
               {%- endfor -%}
             ]
           </script>
@@ -290,7 +290,7 @@
                   {%- else -%}
                     {%- assign aimg_json = 'null' -%}
                   {%- endif -%}
-                  {{ addon_sep }}{"id":{{ av.id }},"title":{{ ap.title | json }},"price":{{ av.price }},"available":{{ ap.available }},"image":{{ aimg_json }}}
+                  {{ addon_sep }}{"id":{{ av.id }},"title":{{ ap.title | json }},"price":{{ av.price }},"compareAtPrice":{{ av.compare_at_price | default: 0 }},"available":{{ ap.available }},"image":{{ aimg_json }}}
                   {%- assign addon_sep = ',' -%}
                 {%- endif -%}
               {%- endfor -%}

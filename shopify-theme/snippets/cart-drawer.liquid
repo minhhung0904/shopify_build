@@ -9,6 +9,7 @@
 {{ 'component-card.css' | asset_url | stylesheet_tag }}
 
 <script src="{{ 'cart.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'bundle-cascade-delete.js' | asset_url }}" defer="defer"></script>
 <script src="{{ 'quantity-popover.js' | asset_url }}" defer="defer"></script>
 
 <style>
@@ -82,7 +83,7 @@
   }
 
   #CartDrawer .cart-item__final-price {
-    color: #f58220;
+    color: #A67C00;
     font-size: 1.6rem;
     font-weight: 700;
     white-space: nowrap;
@@ -105,7 +106,7 @@
   }
 
   #CartDrawer .cart-savings-row {
-    color: #f58220;
+    color: #A67C00;
     font-weight: 700;
     font-size: 1.6rem;
   }
@@ -123,8 +124,8 @@
 
   /* Checkout button uses the primary color */
   #CartDrawer .cart__checkout-button.button {
-    background: #f58220;
-    color: #ffffff;
+    background: #E8B600;
+    color: #1A1A1A;
     border-radius: 10px;
   }
 
@@ -150,6 +151,18 @@
   .cart-drawer__payment .list-payment__item svg {
     width: 3.8rem;
     height: 2.4rem;
+  }
+
+  /* A tiered bundle's main product can occupy more than one real cart line
+     (one per distinct variant chosen) — the first line shows a combined
+     price/breakdown for the whole group and the rest stay in the DOM
+     (needed so removing the group can target every line) but hidden. */
+  .bundle-merged-hidden {
+    display: none;
+  }
+
+  .bundle-breakdown {
+    opacity: 0.75;
   }
 </style>
 
@@ -294,11 +307,56 @@
                   </thead>
 
                   <tbody role="rowgroup">
+                    {%- assign seen_bundle_instances = '' -%}
                     {%- for item in cart.items -%}
+                      {%- liquid
+                        assign bundle_instance = item.properties['_bundle_instance']
+                        assign bundle_role = item.properties['_bundle_role']
+                        assign bundle_is_main = false
+                        if bundle_instance != blank and bundle_role == 'main'
+                          assign bundle_is_main = true
+                        endif
+
+                        assign bundle_is_primary = true
+                        assign line_final_price = item.final_line_price
+                        assign line_original_price = item.original_line_price
+                        assign bundle_breakdown = ''
+
+                        if bundle_is_main
+                          assign bundle_marker = '|' | append: bundle_instance | append: '|'
+                          if seen_bundle_instances contains bundle_marker
+                            assign bundle_is_primary = false
+                          else
+                            assign seen_bundle_instances = seen_bundle_instances | append: bundle_marker
+                          endif
+
+                          assign group_final_total = 0
+                          assign group_original_total = 0
+                          assign group_count = 0
+                          for other in cart.items
+                            if other.properties['_bundle_instance'] == bundle_instance and other.properties['_bundle_role'] == 'main'
+                              assign group_final_total = group_final_total | plus: other.final_line_price
+                              assign group_original_total = group_original_total | plus: other.original_line_price
+                              assign group_count = group_count | plus: 1
+                              assign bundle_breakdown = bundle_breakdown | append: other.variant.title | append: ' × ' | append: other.quantity | append: ', '
+                            endif
+                          endfor
+                          assign line_final_price = group_final_total
+                          assign line_original_price = group_original_total
+                          if group_count > 1 and bundle_breakdown != ''
+                            assign breakdown_len = bundle_breakdown.size | minus: 2
+                            assign bundle_breakdown = bundle_breakdown | slice: 0, breakdown_len
+                          else
+                            assign bundle_breakdown = ''
+                          endif
+                        endif
+                      -%}
                       <tr
                         id="CartDrawer-Item-{{ item.index | plus: 1 }}"
-                        class="cart-item{% if item.parent_relationship.parent != null %} cart-item__nested-line{% endif %}"
+                        class="cart-item{% if item.parent_relationship.parent != null %} cart-item__nested-line{% endif %}{% if bundle_is_main and bundle_is_primary == false %} bundle-merged-hidden{% endif %}"
                         role="row"
+                        data-bundle-instance="{{ bundle_instance }}"
+                        data-bundle-role="{{ bundle_role }}"
                         {% if item.parent_relationship.parent != null %}
                           aria-label="{{- 'products.product.nested_label' | t: title: item.product.title, parent_title: item.parent_relationship.parent.title | escape -}}"
                         {% endif %}
@@ -337,6 +395,10 @@
                               modal_id: cart_disclosure_modal_id
                             -%}
                           </div>
+
+                          {%- if bundle_breakdown != '' -%}
+                            <p class="product-option bundle-breakdown">{{ bundle_breakdown }}</p>
+                          {%- endif -%}
 
                           {%- if item.product.has_only_default_variant == false
                             or item.properties.size != 0
@@ -407,27 +469,34 @@
                             if item.original_line_price != item.final_line_price
                               assign has_line_discount = true
                             endif
-                            if has_compare
+                            assign bundle_has_savings = false
+                            if bundle_is_main and line_original_price != line_final_price
+                              assign bundle_has_savings = true
+                            endif
+                            if bundle_is_main
+                              assign old_line_price = line_original_price
+                              assign line_save = line_original_price | minus: line_final_price
+                            elsif has_compare
                               assign old_line_price = item.variant.compare_at_price | times: item.quantity
-                              assign line_save = old_line_price | minus: item.final_line_price
+                              assign line_save = old_line_price | minus: line_final_price
                             elsif has_line_discount
-                              assign old_line_price = item.original_line_price
-                              assign line_save = item.original_line_price | minus: item.final_line_price
+                              assign old_line_price = line_original_price
+                              assign line_save = line_original_price | minus: line_final_price
                             endif
                           -%}
                           <div class="cart-item__price-wrapper">
-                            {%- if has_compare or has_line_discount -%}
+                            {%- if bundle_has_savings or has_compare or has_line_discount -%}
                               <s class="cart-item__old-price">
                                 <span class="visually-hidden">{{ 'products.product.price.regular_price' | t }}</span>
                                 {{ old_line_price | money }}
                               </s>
                               <strong class="cart-item__final-price">
                                 <span class="visually-hidden">{{ 'products.product.price.sale_price' | t }}</span>
-                                {{ item.final_line_price | money }}
+                                {{ line_final_price | money }}
                               </strong>
                               <div class="cart-item__save">(You save {{ line_save | money }})</div>
                             {%- else -%}
-                              <strong class="cart-item__final-price">{{ item.final_line_price | money }}</strong>
+                              <strong class="cart-item__final-price">{{ line_final_price | money }}</strong>
                             {%- endif -%}
 
                             {%- if item.variant.available and item.unit_price_measurement -%}

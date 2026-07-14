@@ -99,6 +99,7 @@ const emptyForm = {
   maxItems: "2",
   status: "active",
   sortOrder: "0",
+  accentColor: "#FFCB05",
   selectedProducts: [],
   volumeTiers: [{ minQuantity: "2", discountType: "percentage", value: "10" }],
   // multipack
@@ -536,6 +537,7 @@ export default function Bundles() {
       maxItems: bundle.maxItems?.value || "2",
       status: bundle.status?.value || "active",
       sortOrder: bundle.sortOrder?.value || "0",
+      accentColor: config.accentColor || emptyForm.accentColor,
       selectedProducts: (bundle.products?.references?.nodes || []).map((p) => ({
         id: p.id,
         title: p.title,
@@ -674,6 +676,7 @@ export default function Bundles() {
     const base = {
       productHandles: form.selectedProducts.map((p) => p.handle).filter(Boolean),
       addOnHandles: form.rewardProducts.map((p) => p.handle).filter(Boolean),
+      accentColor: form.accentColor,
     };
     if (form.bundleType === "multipack") {
       return { ...base, packSize: Number(form.packSize) || 1 };
@@ -963,6 +966,27 @@ export default function Bundles() {
             value={form.description}
             onInput={setField("description")}
           ></s-text-area>
+
+          <s-stack direction="inline" gap="small-300" alignItems="center">
+            <label htmlFor="accentColor" style={{ fontSize: "0.8125rem" }}>
+              Accent color
+            </label>
+            <input
+              id="accentColor"
+              type="color"
+              name="accentColor"
+              value={form.accentColor}
+              onInput={setField("accentColor")}
+              style={{
+                width: "2.4rem",
+                height: "2.4rem",
+                padding: 0,
+                border: "1px solid #c9cccf",
+                borderRadius: "0.4rem",
+                cursor: "pointer",
+              }}
+            />
+          </s-stack>
 
           {usesDiscount(form.bundleType) ? (
             <s-stack direction="inline" gap="base">

@@ -32,20 +32,32 @@ function addBundleToCart({ lines, bundleHandle, bundleTitle, cartAddUrl, cartUrl
   submitBtn.setAttribute('disabled', 'disabled');
   const instanceId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const items = lines.map(({ id, quantity }) => ({
+  const items = lines.map(({ id, quantity, role }) => ({
     id,
     quantity: quantity || 1,
     properties: {
       _bundle_handle: bundleHandle,
       _bundle_instance: instanceId,
       ...(bundleTitle ? { _bundle: bundleTitle } : {}),
+      // Lets the cart page tell the main product line apart from its
+      // add-ons, so removing the main line can cascade-remove the add-ons.
+      ...(role ? { _bundle_role: role } : {}),
     },
   }));
+
+  // Prefer opening the slide-out cart drawer over a full navigation to
+  // /cart — matches how the theme's own product form adds to cart.
+  const cartDrawer = document.querySelector('cart-drawer') || document.querySelector('cart-notification');
+  const body = { items };
+  if (cartDrawer && typeof cartDrawer.getSectionsToRender === 'function') {
+    body.sections = cartDrawer.getSectionsToRender().map((section) => section.id);
+    body.sections_url = window.location.pathname;
+  }
 
   fetch(cartAddUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify(body),
   })
     .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
     .then(({ ok, data }) => {
@@ -53,7 +65,12 @@ function addBundleToCart({ lines, bundleHandle, bundleTitle, cartAddUrl, cartUrl
         const message = data.description || data.message || 'Could not add this bundle to your cart.';
         throw new Error(message);
       }
-      window.location.href = cartUrl || '/cart';
+      if (cartDrawer && typeof cartDrawer.renderContents === 'function') {
+        cartDrawer.renderContents(data);
+        submitBtn.removeAttribute('disabled');
+      } else {
+        window.location.href = cartUrl || '/cart';
+      }
     })
     .catch((error) => {
       submitBtn.removeAttribute('disabled');
@@ -367,8 +384,13 @@ class BundleBogo extends HTMLElement {
 }
 
 // Tiered "Bundle & Save": full-width tier rows; selecting one expands it to
-// per-slot variant dropdowns plus optional add-on checkboxes. The tier discount
-// applies to the main product lines and the add-on discount to the add-ons.
+// per-unit variant dropdowns plus optional add-on checkboxes. onSubmit groups
+// same-variant units into one cart line each, so the main product adds as a
+// single line whenever every unit shares a variant, and as one line per
+// distinct variant otherwise (a real cart line is always tied to one
+// variant — the cart page visually re-merges those lines back into a single
+// card, see bundle-cascade-delete.js). The tier discount applies to the main
+// product units and the add-on discount to the add-ons.
 class BundleTiered extends HTMLElement {
   connectedCallback() {
     this.variants = this.parseJSON('[data-bp-variants]', []);
@@ -411,9 +433,17 @@ class BundleTiered extends HTMLElement {
     return a.length ? a : this.variants;
   }
 
+  // The "original" reference price is the real pre-discount price (Shopify's
+  // compare-at price), not the live selling price — the merchant may already
+  // have the product marked down, and tier savings should read against the
+  // true original price rather than that already-discounted price.
+  originalUnitPrice(v) {
+    return v.compareAtPrice > v.price ? v.compareAtPrice : v.price;
+  }
+
   defaultUnitPrice() {
     const a = this.availableVariants();
-    return a.length ? a[0].price : 0;
+    return a.length ? this.originalUnitPrice(a[0]) : 0;
   }
 
   selectedIndex() {
@@ -433,10 +463,11 @@ class BundleTiered extends HTMLElement {
     const idx = this.selectedIndex();
     const tier = this.tierMeta(this.tierEls[idx]);
     const avail = this.availableVariants();
-    this.selection = [];
-    for (let i = 0; i < tier.quantity; i++) {
-      this.selection.push(avail[i % avail.length]?.id ?? avail[0]?.id);
-    }
+    // One variant for the whole tier — every unit is the same variant, so the
+    // main product always collapses to a single cart line, however large the
+    // tier quantity is.
+    const defaultId = avail[0]?.id;
+    this.selection = new Array(tier.quantity).fill(defaultId);
     this.tierEls.forEach((el, i) => {
       const sel = i === idx;
       el.classList.toggle('is-selected', sel);
@@ -457,6 +488,10 @@ class BundleTiered extends HTMLElement {
     label.textContent = 'Variant';
     body.appendChild(label);
 
+    // One picker per unit — each can be a different variant. The main
+    // product still only ever adds as one cart line per distinct variant
+    // chosen (onSubmit groups same-variant slots by quantity); when every
+    // slot defaults to the same variant, that's a single line.
     for (let slot = 0; slot < tier.quantity; slot++) {
       const row = document.createElement('div');
       row.className = 'bp-vslot';
@@ -533,17 +568,21 @@ class BundleTiered extends HTMLElement {
         prices.className = 'bp-addon__prices';
         const now = document.createElement('span');
         now.className = 'bp-addon__now';
+        // The add-on discount is calculated off the live selling price (it
+        // has to match what checkout actually charges); the struck-through
+        // reference price is the true original (compare-at) price.
         const disc = applyDiscount(
           a.price,
           this.addOnDiscount.discountType,
           this.addOnDiscount.discountValue,
         );
+        const original = this.originalUnitPrice(a);
         now.textContent = formatMoney(disc, this.dataset.currency);
         prices.appendChild(now);
-        if (disc < a.price) {
+        if (disc < original) {
           const was = document.createElement('s');
           was.className = 'bp-addon__was';
-          was.textContent = formatMoney(a.price, this.dataset.currency);
+          was.textContent = formatMoney(original, this.dataset.currency);
           prices.appendChild(was);
         }
 
@@ -561,17 +600,30 @@ class BundleTiered extends HTMLElement {
     const selIdx = this.selectedIndex();
     this.tierEls.forEach((el, i) => {
       const tier = this.tierMeta(el);
-      let base;
+      // liveTotal is what the tier discount is actually calculated off of
+      // (matches the checkout math, which discounts the real selling
+      // price). originalTotal is only the struck-through reference price —
+      // the true pre-markdown price, shown so "you save" reflects the full
+      // savings even when the product is already on sale in Shopify.
+      let liveTotal;
+      let originalTotal;
       if (i === selIdx) {
-        base = this.selection.reduce((sum, id) => {
+        liveTotal = this.selection.reduce((sum, id) => {
           const v = this.variants.find((x) => String(x.id) === String(id));
           return sum + (v ? v.price : 0);
         }, 0);
+        originalTotal = this.selection.reduce((sum, id) => {
+          const v = this.variants.find((x) => String(x.id) === String(id));
+          return sum + (v ? this.originalUnitPrice(v) : 0);
+        }, 0);
       } else {
-        base = this.defaultUnitPrice() * tier.quantity;
+        const defaultVariant = this.availableVariants()[0];
+        liveTotal = (defaultVariant ? defaultVariant.price : 0) * tier.quantity;
+        originalTotal = this.defaultUnitPrice() * tier.quantity;
       }
-      const now = applyDiscount(base, tier.discountType, tier.discountValue);
-      const saved = Math.max(0, base - now);
+      const now = applyDiscount(liveTotal, tier.discountType, tier.discountValue);
+      const was = originalTotal;
+      const saved = Math.max(0, was - now);
 
       const nowEl = el.querySelector('[data-bp-now]');
       const wasEl = el.querySelector('[data-bp-was]');
@@ -580,13 +632,13 @@ class BundleTiered extends HTMLElement {
 
       if (nowEl) nowEl.textContent = formatMoney(now, this.dataset.currency);
       if (wasEl) {
-        const show = now < base;
-        wasEl.textContent = show ? formatMoney(base, this.dataset.currency) : '';
+        const show = now < was;
+        wasEl.textContent = show ? formatMoney(was, this.dataset.currency) : '';
         wasEl.style.display = show ? '' : 'none';
       }
       if (subEl) {
         if (saved > 0) {
-          const pct = base > 0 ? Math.round((saved / base) * 100) : 0;
+          const pct = was > 0 ? Math.round((saved / was) * 100) : 0;
           subEl.textContent = `You save ${pct}%`;
         } else {
           subEl.textContent = 'Standard price';
@@ -602,12 +654,19 @@ class BundleTiered extends HTMLElement {
 
   onSubmit() {
     const lines = [];
+
+    // Combine main-product slots into one cart line per chosen variant (a
+    // 3-unit tier where every slot is the same variant becomes a single line
+    // of quantity 3, not three quantity-1 lines). Add-ons stay one line each.
+    const mainQuantities = new Map();
     this.selection
       .filter((id) => id != null)
-      .forEach((id) => lines.push({ id, quantity: 1 }));
+      .forEach((id) => mainQuantities.set(id, (mainQuantities.get(id) || 0) + 1));
+    mainQuantities.forEach((quantity, id) => lines.push({ id, quantity, role: 'main' }));
+
     this.addOns
       .filter((a) => this.addOnChecked.has(String(a.id)))
-      .forEach((a) => lines.push({ id: a.id, quantity: 1 }));
+      .forEach((a) => lines.push({ id: a.id, quantity: 1, role: 'addon' }));
     if (!lines.length) return;
     addBundleToCart({
       lines,
