@@ -2946,6 +2946,30 @@ details-disclosure > details {
   word-break: break-word;
 }
 
+/* Blue "SAVE X%" discount pill (snippets/save-badge.liquid) — used on product
+   cards and the product page in place of the plain "Sale" tag. */
+.save-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.save-badge svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: currentColor;
+}
+
 .gradient {
   background: rgb(var(--color-background));
   background: var(--gradient-background);

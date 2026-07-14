@@ -1,0 +1,24 @@
+{%- comment -%}
+  Blue "SAVE X%" pill from compare-at vs price, styled like a discount tag.
+  Used on product cards (list) and the product page (detail).
+
+  Params:
+  - product (required)
+  - variant (optional) — price against this variant instead of the product
+  - class   (optional) — extra classes (e.g. positioning on cards)
+{%- endcomment -%}
+{%- liquid
+  assign sb_price = product.price
+  assign sb_compare = product.compare_at_price
+  if variant
+    assign sb_price = variant.price
+    assign sb_compare = variant.compare_at_price
+  endif
+-%}
+{%- if sb_compare and sb_compare > sb_price -%}
+  {%- assign sb_pct = sb_compare | minus: sb_price | times: 100.0 | divided_by: sb_compare | round -%}
+  <span class="save-badge {{ class }}">
+    {{- 'icon-discount.svg' | inline_asset_content -}}
+    <span class="save-badge__text">SAVE {{ sb_pct }}%</span>
+  </span>
+{%- endif -%}
