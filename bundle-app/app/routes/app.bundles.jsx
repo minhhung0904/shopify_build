@@ -1426,7 +1426,7 @@ export default function Bundles() {
                     }
                   ></s-number-field>
                   <s-select
-                    label="Discount type"
+                    label="Pricing"
                     value={tier.discountType}
                     onChange={(e) =>
                       updateTieredTier(index, "discountType", e.target.value)
@@ -1434,9 +1434,16 @@ export default function Bundles() {
                   >
                     <s-option value="percentage">Percentage off</s-option>
                     <s-option value="fixed_amount">Amount off</s-option>
+                    <s-option value="fixed_price">Set price</s-option>
                   </s-select>
                   <s-number-field
-                    label="Value"
+                    label={
+                      tier.discountType === "fixed_price"
+                        ? "Tier price"
+                        : tier.discountType === "fixed_amount"
+                          ? "Amount off"
+                          : "Percent off"
+                    }
                     value={tier.value}
                     onInput={(e) =>
                       updateTieredTier(index, "value", e.target.value)

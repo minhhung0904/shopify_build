@@ -106,10 +106,14 @@ function clampPct(value) {
 }
 
 // Currency-space discount (base is a float in presentment currency).
+// fixed_price = an absolute target total for these units (e.g. a tier priced
+// at $50); capped at `base` since a merge can only reduce, never raise, the
+// summed component price.
 function applyDiscount(base, discountType, value) {
   const v = Number(value) || 0;
   if (discountType === "percentage") return Math.max(0, base * (1 - v / 100));
   if (discountType === "fixed_amount") return Math.max(0, base - v);
+  if (discountType === "fixed_price") return Math.max(0, Math.min(base, v));
   return base;
 }
 

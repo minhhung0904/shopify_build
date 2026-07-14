@@ -93,11 +93,19 @@ function buildCandidate(bundle, lines) {
 
     const candidates = [];
     if (tier) {
-      const main = discountCandidate(
-        mainLines,
-        tier.discountType,
-        tier.discountValue,
-      );
+      let main;
+      if (tier.discountType === 'fixed_price') {
+        // A tier priced absolutely (e.g. "$50 for the 2-pack"): discount the
+        // main lines down to that price via an amount-off = current total − price.
+        const mainSubtotal = mainLines.reduce(
+          (sum, line) => sum + Number(line.cost.subtotalAmount.amount),
+          0,
+        );
+        const amount = Math.max(0, mainSubtotal - (Number(tier.discountValue) || 0));
+        main = amount > 0 ? discountCandidate(mainLines, 'fixed_amount', amount) : null;
+      } else {
+        main = discountCandidate(mainLines, tier.discountType, tier.discountValue);
+      }
       if (main) candidates.push(main);
     }
     if (addOnLines.length) {
