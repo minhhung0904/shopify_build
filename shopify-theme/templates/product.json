@@ -6,6 +6,13 @@
         "title": {
           "type": "title"
         },
+        "social_proof": {
+          "type": "social_proof",
+          "settings": {
+            "order_count": "100+",
+            "show_rating": true
+          }
+        },
         "price": {
           "type": "price"
         },
@@ -68,6 +75,7 @@
       },
       "block_order": [
         "title",
+        "social_proof",
         "price",
         "description",
         "variant_picker",

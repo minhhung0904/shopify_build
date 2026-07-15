@@ -120,6 +120,10 @@
       "on_sale": "Sale",
       "save_amount": "SAVE {{ percent }}%",
       "product_variants": "Product variants",
+      "social_proof": {
+        "order_count_label": "{{ count }} orders",
+        "timeframe_label": "in the last 24h"
+      },
       "media": {
         "gallery_viewer": "Gallery Viewer",
         "load_image": "Load image {{ index }} in gallery view",

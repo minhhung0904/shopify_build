@@ -189,8 +189,60 @@ product-info {
   right: 1.5rem;
 }
 
+/* Add to cart — kept visually identical to the collection/list card button
+   (.collection .quick-add__submit in template-collection.css): solid
+   main-color fill + button-label text, with a white fill that wipes in from
+   both edges on hover while the label flips to the main color. Dawn's shadow
+   (::before) and border-ring (::after) pseudo-elements are repurposed as the
+   two wipe halves. */
 .product-form__submit {
   margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgb(var(--color-button));
+  border-radius: 10px;
+  background-color: rgb(var(--color-button));
+  color: rgb(var(--color-button-text));
+  font-weight: 600;
+  z-index: 0;
+  transition: color 0.45s ease;
+}
+.product-form__submit::before,
+.product-form__submit::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  height: auto;
+  background-color: #ffffff;
+  background-image: none;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0;
+  z-index: -1;
+  transition: width 0.45s ease;
+}
+.product-form__submit::before {
+  left: 0;
+  right: auto;
+}
+.product-form__submit::after {
+  right: 0;
+  left: auto;
+}
+.product-form__submit:not([disabled]):hover::before,
+.product-form__submit:not([disabled]):hover::after,
+.product-form__submit:focus-visible::before,
+.product-form__submit:focus-visible::after {
+  width: 50%;
+}
+.product-form__submit:not([disabled]):hover,
+.product-form__submit:focus-visible {
+  color: rgb(var(--color-button));
+}
+.product-form__submit:not([disabled]):active {
+  transform: translateY(1px);
 }
 
 .product-form__submit[aria-disabled='true'] + .shopify-payment-button .shopify-payment-button__button[disabled],

@@ -98,26 +98,54 @@
   .bundle-picker-{{ scope }} .bp-card__price { font-size: 1.8rem; font-weight: 700; margin: 0; }
   .bundle-picker-{{ scope }} .bp-card__form { margin-top: auto; }
 
-  /* Outlined "secondary" button, to match the theme's list/product add-to-cart
-     (Dawn button--secondary): accent border + accent text on a transparent
-     fill, filling with the accent on hover. */
+  /* Kept visually identical to the theme's list/product add-to-cart button
+     (.collection .quick-add__submit in template-collection.css, and
+     .product-form__submit in section-main-product.css): solid accent fill +
+     dark label, with a white fill that wipes in from both edges on hover
+     while the label flips to the accent color. */
   .bundle-picker-{{ scope }} .bp-card__submit {
+    position: relative;
+    overflow: hidden;
     width: 100%;
     padding: 1.2rem 1.6rem;
     border: 2px solid var(--bp-accent);
-    border-radius: 4px;
-    background: transparent;
-    color: var(--bp-accent);
+    border-radius: 10px;
+    background-color: var(--bp-accent);
+    color: var(--bp-card-text);
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.05s ease;
+    z-index: 0;
+    transition: color 0.45s ease;
   }
-  .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled) {
-    background: var(--bp-accent);
-    color: #ffffff;
+  .bundle-picker-{{ scope }} .bp-card__submit::before,
+  .bundle-picker-{{ scope }} .bp-card__submit::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    height: auto;
+    background-color: #ffffff;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+    z-index: -1;
+    transition: width 0.45s ease;
+  }
+  .bundle-picker-{{ scope }} .bp-card__submit::before { left: 0; right: auto; }
+  .bundle-picker-{{ scope }} .bp-card__submit::after { right: 0; left: auto; }
+  .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled)::before,
+  .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled)::after,
+  .bundle-picker-{{ scope }} .bp-card__submit:focus-visible::before,
+  .bundle-picker-{{ scope }} .bp-card__submit:focus-visible::after {
+    width: 50%;
+  }
+  .bundle-picker-{{ scope }} .bp-card__submit:hover:not(:disabled),
+  .bundle-picker-{{ scope }} .bp-card__submit:focus-visible {
+    color: var(--bp-accent);
   }
   .bundle-picker-{{ scope }} .bp-card__submit:active:not(:disabled) { transform: translateY(1px); }
   .bundle-picker-{{ scope }} .bp-card__submit:disabled { opacity: 0.5; cursor: not-allowed; }

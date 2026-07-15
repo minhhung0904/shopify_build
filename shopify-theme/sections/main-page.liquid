@@ -12,6 +12,15 @@
       padding-bottom: {{ section.settings.padding_bottom }}px;
     }
   }
+
+  {%- if template.suffix == 'contact' -%}
+    /* Contact page: center the page title and tighten the gap above the
+       contact form below (the .rte content block is empty on this page). */
+    #shopify-section-{{ section.id }} .main-page-title {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+  {%- endif -%}
 {%- endstyle -%}
 
 <div class="page-width page-width--narrow section-{{ section.id }}-padding">

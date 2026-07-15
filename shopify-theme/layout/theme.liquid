@@ -278,18 +278,101 @@
       }
     {% endstyle %}
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tilt+Warp&display=swap" rel="stylesheet">
+    <link rel="preload" as="font" href="{{ 'SFUFuturaRegular.TTF' | asset_url }}" type="font/ttf" crossorigin>
     <style>
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaLight.TTF" | asset_url }}') format('truetype');
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaLightOblique.TTF" | asset_url }}') format('truetype');
+        font-weight: 300;
+        font-style: italic;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaBook.TTF" | asset_url }}') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaBookOblique.TTF" | asset_url }}') format('truetype');
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaRegular.TTF" | asset_url }}') format('truetype');
+        font-weight: 500;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaObliqueTTF.TTF" | asset_url }}') format('truetype');
+        font-weight: 500;
+        font-style: italic;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaBold.TTF" | asset_url }}') format('truetype');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaBoldOblique.TTF" | asset_url }}') format('truetype');
+        font-weight: 700;
+        font-style: italic;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaExtraBold.TTF" | asset_url }}') format('truetype');
+        font-weight: 800;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaExtraBoldOblique.TTF" | asset_url }}') format('truetype');
+        font-weight: 800;
+        font-style: italic;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaHeavy.TTF" | asset_url }}') format('truetype');
+        font-weight: 900;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('{{ "SFUFuturaHeavyOblique.TTF" | asset_url }}') format('truetype');
+        font-weight: 900;
+        font-style: italic;
+        font-display: swap;
+      }
+
       :root {
-        --font-body-family: 'Tilt Warp', sans-serif;
+        --font-body-family: 'Futura', sans-serif;
         --font-body-style: normal;
-        --font-body-weight: 400;
-        --font-body-weight-bold: 700;
-        --font-heading-family: 'Tilt Warp', sans-serif;
+        --font-body-weight: 500;
+        --font-body-weight-bold: 800;
+        --font-heading-family: 'Futura', sans-serif;
         --font-heading-style: normal;
-        --font-heading-weight: 400;
+        --font-heading-weight: 700;
         --font-heading-line-height: 1.1;
         --font-heading-letter-spacing: 0.06rem;
       }

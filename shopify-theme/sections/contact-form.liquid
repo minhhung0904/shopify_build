@@ -13,7 +13,10 @@
     }
   }
 
-  /* Contact form: centered heading, rounded inputs, full-width Send button. */
+  /* Contact form: centered heading, rounded inputs, full-width Send button.
+     Heading size pinned to match the plain <h1> used for collection titles
+     (e.g. "Products" on the catalog page), regardless of this section's
+     heading_size setting. */
   .contact .title,
   .section-{{ section.id }}-padding .title {
     display: block !important;
@@ -21,7 +24,15 @@
     text-align: center !important;
     margin-left: auto;
     margin-right: auto;
-    margin-bottom: 3.6rem;
+    font-size: calc(var(--font-heading-scale) * 3rem) !important;
+    margin-bottom: 1.5rem;
+  }
+
+  @media screen and (min-width: 750px) {
+    .contact .title,
+    .section-{{ section.id }}-padding .title {
+      font-size: calc(var(--font-heading-scale) * 4rem) !important;
+    }
   }
 
   #ContactForm .field,
@@ -44,7 +55,7 @@
     border: 2px solid #E8B600;
     border-radius: 12px;
     background-color: #E8B600;
-    color: #1A1A1A;
+    color: #ffffff;
     z-index: 0;
     transition: color 0.45s ease;
   }

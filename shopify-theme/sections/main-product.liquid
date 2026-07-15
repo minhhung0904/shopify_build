@@ -16,6 +16,7 @@
   {{ 'component-rating.css' | asset_url | stylesheet_tag }}
   {{ 'component-deferred-media.css' | asset_url | stylesheet_tag }}
   {{ 'component-shipping-timeline.css' | asset_url | stylesheet_tag }}
+  {{ 'component-social-proof.css' | asset_url | stylesheet_tag }}
 
   {% unless product.has_only_default_variant %}
     {{ 'component-product-variant-picker.css' | asset_url | stylesheet_tag }}
@@ -194,6 +195,46 @@
                         {{ product.title | escape }}
                       </h2>
                     </a>
+                  </div>
+                {%- when 'social_proof' -%}
+                  <div class="product__social-proof" {{ block.shopify_attributes }}>
+                    <ul class="product__social-proof-avatars" role="list">
+                      {%- for i in (1..5) -%}
+                        {%- assign avatar_key = 'avatar_' | append: i -%}
+                        {%- assign avatar_image = block.settings[avatar_key] -%}
+                        <li class="product__social-proof-avatar">
+                          {%- if avatar_image != blank -%}
+                            <img
+                              src="{{ avatar_image | image_url: width: 64 }}"
+                              srcset="{{ avatar_image | image_url: width: 64 }} 1x, {{ avatar_image | image_url: width: 128 }} 2x"
+                              alt=""
+                              loading="lazy"
+                              width="32"
+                              height="32"
+                            >
+                          {%- else -%}
+                            <img
+                              src="{{ 'social-proof-avatar-' | append: i | append: '.png' | asset_url }}"
+                              alt=""
+                              loading="lazy"
+                              width="32"
+                              height="32"
+                            >
+                          {%- endif -%}
+                        </li>
+                      {%- endfor -%}
+                    </ul>
+                    <div class="product__social-proof-badge">
+                      <span class="product__social-proof-count">
+                        {{- 'products.product.social_proof.order_count_label' | t: count: block.settings.order_count -}}
+                      </span>
+                      <span class="product__social-proof-meta">
+                        {%- if block.settings.show_rating -%}
+                          <span class="product__social-proof-stars" aria-hidden="true">★★★★★</span>
+                        {%- endif -%}
+                        {{- 'products.product.social_proof.timeframe_label' | t -}}
+                      </span>
+                    </div>
                   </div>
                 {%- when 'price' -%}
                   <div id="price-{{ section.id }}" role="status" {{ block.shopify_attributes }}>
@@ -917,6 +958,54 @@
       "type": "price",
       "name": "t:sections.main-product.blocks.price.name",
       "limit": 1
+    },
+    {
+      "type": "social_proof",
+      "name": "Social proof",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "Avatars of recent buyers, shown as an overlapping stack next to an orders badge."
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar_1",
+          "label": "Avatar 1"
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar_2",
+          "label": "Avatar 2"
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar_3",
+          "label": "Avatar 3"
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar_4",
+          "label": "Avatar 4"
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar_5",
+          "label": "Avatar 5"
+        },
+        {
+          "type": "text",
+          "id": "order_count",
+          "label": "Order count",
+          "default": "100+"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_rating",
+          "label": "Show star rating",
+          "default": true
+        }
+      ]
     },
     {
       "type": "sku",
