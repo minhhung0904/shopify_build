@@ -166,14 +166,26 @@
               bundle-product.liquid). From a plain theme file it's nil, so we
               use the fully-qualified app-owned metaobject type instead.
             {%- endcomment -%}
+            {%- comment -%}
+              App-owned metaobject types are namespaced by the app's numeric
+              id (app--<id>--bundle). When the store switches to a different
+              bundle app the id changes, so we probe every known id here.
+              Find the current id in Admin > Settings > Custom data >
+              Metaobjects > "Bundle" (its "type" reads app--<id>--bundle) and
+              add it to this comma-separated list.
+            {%- endcomment -%}
             {%- assign bundle_matched = false -%}
-            {%- for bundle in shop.metaobjects["app--395796512769--bundle"].values -%}
-              {%- if bundle.status.value == "active" and bundle_matched == false -%}
-                {%- assign bundle_cfg = bundle.config.value -%}
-                {%- if bundle_cfg.productHandles contains product.handle -%}
-                  {%- assign bundle_matched = true -%}
+            {%- assign bundle_app_ids = "395796512769,399662219265" | split: "," -%}
+            {%- for bundle_app_id in bundle_app_ids -%}
+              {%- assign bundle_type = "app--" | append: bundle_app_id | append: "--bundle" -%}
+              {%- for bundle in shop.metaobjects[bundle_type].values -%}
+                {%- if bundle.status.value == "active" and bundle_matched == false -%}
+                  {%- assign bundle_cfg = bundle.config.value -%}
+                  {%- if bundle_cfg.productHandles contains product.handle -%}
+                    {%- assign bundle_matched = true -%}
+                  {%- endif -%}
                 {%- endif -%}
-              {%- endif -%}
+              {%- endfor -%}
             {%- endfor -%}
 
             {%- for block in section.blocks -%}

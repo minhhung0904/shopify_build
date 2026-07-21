@@ -2,6 +2,35 @@
 {{ 'component-card.css' | asset_url | stylesheet_tag }}
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
 
+{%- style -%}
+  /* Keep every product card the same width. Without this the last,
+     incomplete row inherits Dawn's .grid__item { flex-grow: 1 } and
+     stretches its cards wider than the full rows above. */
+  #ProductGridContainer .product-grid .grid__item {
+    flex-grow: 0;
+  }
+
+  /* Give every card the same height regardless of title length by
+     reserving a fixed three-line title area (longer titles are clamped
+     with an ellipsis, shorter ones still occupy three lines). */
+  #ProductGridContainer .card__heading {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    min-height: 4.2em; /* fallback for browsers without the lh unit */
+    min-height: 3lh;
+  }
+
+  /* The bundle-main card action is an <a> styled as a button; the card's
+     underline-links-hover behaviour would otherwise underline its text. */
+  #ProductGridContainer a.quick-add__submit,
+  #ProductGridContainer a.quick-add__submit:hover {
+    text-decoration: none;
+  }
+{%- endstyle -%}
+
 {% if section.settings.image_shape == 'blob' %}
   {{ 'mask-blobs.css' | asset_url | stylesheet_tag }}
 {%- endif -%}
@@ -156,6 +185,29 @@
                   {% if section.settings.quick_add == 'bulk' %} collection-quick-add-bulk{% endif %}
                 "
               >
+                {%- comment -%}
+                  Build the set of product handles that are the MAIN product of
+                  an active bundle (the first handle in config.productHandles).
+                  Cards for these products link to the product page's bundle
+                  picker instead of quick-adding the lone variant. Keep the app
+                  id list in sync with sections/main-product.liquid.
+                {%- endcomment -%}
+                {%- liquid
+                  assign bundle_main_handles = ','
+                  assign bundle_app_ids = '395796512769,399662219265' | split: ','
+                  for bundle_app_id in bundle_app_ids
+                    assign bundle_type = 'app--' | append: bundle_app_id | append: '--bundle'
+                    for bundle in shop.metaobjects[bundle_type].values
+                      if bundle.status.value == 'active'
+                        assign bcfg = bundle.config.value
+                        assign main_handle = bcfg.productHandles | first
+                        if main_handle != blank
+                          assign bundle_main_handles = bundle_main_handles | append: main_handle | append: ','
+                        endif
+                      endif
+                    endfor
+                  endfor
+                -%}
                 {% assign skip_card_product_styles = false %}
                 {%- for product in collection.products -%}
                   {% assign lazy_load = false %}
@@ -180,7 +232,8 @@
                       skip_styles: skip_card_product_styles,
                       quick_add: section.settings.quick_add,
                       section_id: section.id,
-                      product_view_context: 'collection'
+                      product_view_context: 'collection',
+                      bundle_main_handles: bundle_main_handles
                     %}
                   </li>
                   {%- assign skip_card_product_styles = true -%}

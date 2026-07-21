@@ -39,6 +39,21 @@
     if ratio == 0 or ratio == null
       assign ratio = 1
     endif
+
+    comment
+      When this product is the MAIN product of an active bundle, its
+      add-to-cart must lead to the bundle picker on the product page
+      instead of adding the lone variant. bundle_main_handles is a
+      comma-delimited (leading/trailing commas) list built by the
+      collection section from the bundle metaobjects.
+    endcomment
+    assign is_bundle_main = false
+    if bundle_main_handles != blank
+      assign bundle_main_needle = ',' | append: card_product.handle | append: ','
+      if bundle_main_handles contains bundle_main_needle
+        assign is_bundle_main = true
+      endif
+    endif
   -%}
 
   <product-component view-event-payload="{{ card_product | standard_event_data: 'view', context: product_view_context | escape }}">
@@ -299,7 +314,25 @@
                   assign qty_rules = true
                 endif
               -%}
-              {%- if card_product.variants_count > 1 or qty_rules -%}
+              {%- if is_bundle_main -%}
+                {%- comment -%}
+                  Bundle main product: send the shopper to the product page
+                  where the bundle picker builds and adds the bundle, rather
+                  than quick-adding the single variant at full price.
+                {%- endcomment -%}
+                <a
+                  href="{{ card_product.url }}"
+                  class="quick-add__submit button button--full-width button--secondary{% if horizontal_quick_add %} card--horizontal__quick-add animate-arrow{% endif %}"
+                  aria-labelledby="title-{{ section_id }}-{{ card_product.id }}"
+                >
+                  {{ 'products.product.choose_options' | t }}
+                  {%- if horizontal_quick_add -%}
+                    <span class="icon-wrap">
+                      {{- 'icon-arrow.svg' | inline_asset_content -}}
+                    </span>
+                  {%- endif -%}
+                </a>
+              {%- elsif card_product.variants_count > 1 or qty_rules -%}
                 <modal-opener data-modal="#QuickAdd-{{ card_product.id }}">
                   <button
                     id="{{ product_form_id }}-submit"

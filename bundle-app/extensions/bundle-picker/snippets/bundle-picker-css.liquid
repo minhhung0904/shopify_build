@@ -17,6 +17,9 @@
     padding: {{ pad_top | default: 60 }}px 1.5rem {{ pad_bottom | default: 60 }}px;
     background: var(--bp-bg);
     color: var(--bp-text);
+    /* Inherit the host theme's typography so the bundle matches the store. */
+    font-family: var(--font-body-family, inherit);
+    font-style: var(--font-body-style, normal);
     --bp-accent-soft: color-mix(in srgb, var(--bp-accent) 18%, var(--bp-card-bg));
     --bp-accent-ring: color-mix(in srgb, var(--bp-accent) 45%, var(--bp-card-bg));
     --bp-border: color-mix(in srgb, var(--bp-card-text) 16%, transparent);
@@ -24,6 +27,22 @@
   }
 
   .bundle-picker-{{ scope }} .bp-wrap { max-width: 120rem; margin: 0 auto; }
+
+  /* Headings/titles follow the theme's heading font. */
+  .bundle-picker-{{ scope }} .bp-heading,
+  .bundle-picker-{{ scope }} .bp-card__title,
+  .bundle-picker-{{ scope }} .bp-tier2__title {
+    font-family: var(--font-heading-family, inherit);
+  }
+
+  /* Form controls (buttons, inputs, selects) don't inherit font-family by
+     default, so force them to use the bundle's theme font. */
+  .bundle-picker-{{ scope }} button,
+  .bundle-picker-{{ scope }} input,
+  .bundle-picker-{{ scope }} select,
+  .bundle-picker-{{ scope }} textarea {
+    font-family: inherit;
+  }
 
   .bundle-picker-{{ scope }} .bp-heading {
     text-align: center;
@@ -112,10 +131,11 @@
     border-radius: 10px;
     background-color: var(--bp-accent);
     color: var(--bp-card-text);
+    /* Buttons don't inherit font-family by default, so set the theme font. */
+    font-family: var(--font-body-family, inherit);
     font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: 0.04em;
-    text-transform: uppercase;
     cursor: pointer;
     z-index: 0;
     transition: color 0.45s ease;
