@@ -32,23 +32,25 @@
       }
     }
 
-    /* White, rounded text box with black text. Wider and less tall. */
+    /* No box: drop the background/padding entirely so only the button shows over the image. */
     #Slider-{{ section.id }} .banner__box {
-      background: #ffffff;
+      background: transparent;
       background-image: none;
-      color: #111111;
-      border-radius: 16px;
-      max-width: 68rem;
-      width: 100%;
-      padding-top: 2.2rem;
-      padding-bottom: 2.4rem;
-      padding-left: 4.5rem;
-      padding-right: 4.5rem;
+      box-shadow: none;
+      border: none;
+      padding: 0;
+      max-width: none;
+      width: auto;
+      min-width: 0;
     }
-    #Slider-{{ section.id }} .banner__box .banner__heading,
-    #Slider-{{ section.id }} .banner__box .banner__text,
-    #Slider-{{ section.id }} .banner__box .banner__text p {
-      color: #111111;
+
+    /* Bigger SHOP NOW button. */
+    #Slider-{{ section.id }} .banner__buttons .button {
+      min-width: 18rem;
+      min-height: 6rem;
+      padding-left: 3.5rem;
+      padding-right: 3.5rem;
+      font-size: 1.8rem;
     }
   {%- endstyle -%}
 {%- endif -%}
