@@ -9,6 +9,9 @@
   {%- endif -%}
 {%- endfor -%}
 {%- if has_asset_image -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&display=swap">
   {%- style -%}
     /* Full-length background: let the asset image define the slide height so the
        whole image is visible (no cropping) instead of cover-cropping the sides. */
@@ -26,9 +29,17 @@
         width: 100%;
         object-fit: contain;
       }
+      /* The slide is the containing block, otherwise the overlay stretches past
+         the image (down to the slider controls) and the button sits too low. */
+      #Slider-{{ section.id }} .slideshow__slide {
+        position: relative;
+      }
       #Slider-{{ section.id }} .banner__content {
         position: absolute;
         inset: 0;
+        padding-top: 5rem;
+        padding-bottom: 5rem;
+        align-items: center;
       }
     }
 
@@ -44,13 +55,127 @@
       min-width: 0;
     }
 
-    /* Bigger SHOP NOW button. */
+    /* Very light dark wash over the image so the button stands out. Sits above
+       the image but below .banner__content (z-index 2). */
+    #Slider-{{ section.id }} .slideshow__slide {
+      position: relative;
+    }
+    #Slider-{{ section.id }} .slideshow__slide::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.16);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* SHOP NOW button: gold gradient pill with a bright gold rim and a poke ball
+       on the right, still translucent so the frosted blur shows through. */
     #Slider-{{ section.id }} .banner__buttons .button {
-      min-width: 18rem;
-      min-height: 6rem;
-      padding-left: 3.5rem;
-      padding-right: 3.5rem;
-      font-size: 1.8rem;
+      /* Bangers (the anime/comic face), upright. */
+      font-family: 'Bangers', 'Comic Sans MS', var(--font-heading-family), sans-serif;
+      font-style: normal;
+      font-weight: 400;
+      font-size: 3.7rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      min-width: 22rem;
+      min-height: 7.4rem;
+      /* Padding trimmed by the amount the bigger text adds, so the pill and the
+         ball keep their current size. */
+      padding-left: 3.1rem;
+      /* Room on the right for the poke ball. */
+      padding-right: 8.7rem;
+      /* Bangers has a deep descent metric with no descenders in "SHOP NOW", so
+         the line box centres with extra room underneath — push the text back
+         down to optically centre it. */
+      line-height: 1;
+      padding-top: 0.1em;
+      padding-bottom: 0;
+      border-radius: 999px;
+      color: #241505;
+      background-image: linear-gradient(
+        180deg,
+        rgba(255, 236, 165, 0.55) 0%,
+        rgba(247, 206, 95, 0.5) 45%,
+        rgba(206, 152, 40, 0.55) 100%
+      );
+      background-color: rgba(250, 196, 36, 0.2);
+      backdrop-filter: blur(4px) saturate(130%);
+      -webkit-backdrop-filter: blur(4px) saturate(130%);
+      border: 3px solid rgba(255, 231, 150, 0.85);
+      box-shadow:
+        inset 0 0.2rem 0.6rem rgba(255, 255, 255, 0.55),
+        inset 0 -0.3rem 0.8rem rgba(120, 75, 0, 0.25),
+        0 0.8rem 2.4rem rgba(0, 0, 0, 0.35);
+      text-shadow: 0 0.1rem 0 rgba(255, 240, 190, 0.6);
+      transition: filter 0.25s ease, box-shadow 0.25s ease;
+    }
+    /* Dawn uses ::after for the button border — reuse it for the poke ball. */
+    #Slider-{{ section.id }} .banner__buttons .button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 2.2rem;
+      left: auto;
+      bottom: auto;
+      transform: translateY(-50%);
+      width: 4.6rem;
+      height: 4.6rem;
+      background: url({{ 'pokeball-shop.png' | asset_url }}) center / contain no-repeat;
+      box-shadow: none;
+      border: none;
+      border-radius: 0;
+      filter: drop-shadow(0 0.2rem 0.4rem rgba(0, 0, 0, 0.35));
+    }
+    /* Browsers without backdrop-filter (older Android WebViews, Firefox with the
+       flag off) render the background flat, so drop the alpha further there —
+       that is what made the button look solid on mobile but glassy on desktop. */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      #Slider-{{ section.id }} .banner__buttons .button {
+        background-color: transparent;
+      }
+    }
+    #Slider-{{ section.id }} .banner__buttons .button:hover {
+      filter: brightness(1.08);
+      box-shadow:
+        inset 0 0.2rem 0.6rem rgba(255, 255, 255, 0.6),
+        0 1rem 3rem rgba(0, 0, 0, 0.4);
+    }
+
+    /* Desktop: a size up again, mobile keeps the values above. */
+    @media screen and (min-width: 750px) {
+      /* Sit above the vertical centre of the image. Offset with `top`, not
+         `transform`: a transformed/animated ancestor becomes a backdrop root,
+         which leaves the button's backdrop-filter with nothing to blur (that is
+         why the frosted effect showed on mobile but not on desktop). */
+      #Slider-{{ section.id }} .banner__box {
+        transform: none;
+        position: relative;
+        top: -10%;
+      }
+      #Slider-{{ section.id }} .banner__content.scroll-trigger {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+      #Slider-{{ section.id }} .banner__buttons .button {
+        font-size: 5rem;
+        min-width: 34rem;
+        min-height: 11.5rem;
+        padding-left: 5.6rem;
+        padding-right: 13.1rem;
+        padding-top: 0.1em;
+        padding-bottom: 0;
+        background-color: rgba(250, 196, 36, 0.14);
+        backdrop-filter: blur(12px) saturate(130%);
+        -webkit-backdrop-filter: blur(12px) saturate(130%);
+      }
+      #Slider-{{ section.id }} .banner__buttons .button::after {
+        right: 3.4rem;
+        width: 7rem;
+        height: 7rem;
+      }
     }
   {%- endstyle -%}
 {%- endif -%}
