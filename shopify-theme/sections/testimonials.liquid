@@ -40,6 +40,13 @@
     color: #FFC107;
   }
 
+  @media screen and (max-width: 749px) {
+    .testimonials-{{ section.id }} .testimonials__rating {
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+  }
+
   .testimonials-{{ section.id }} .testimonials__grid {
     display: grid;
     grid-template-columns: repeat(1, 1fr);

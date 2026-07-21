@@ -19,6 +19,40 @@ if (!customElements.get('media-gallery')) {
             .addEventListener('click', this.setActiveMedia.bind(this, mediaToSwitch.dataset.target, false));
         });
         if (this.dataset.desktopLayout.includes('thumbnail') && this.mql.matches) this.removeListSemantic();
+        this.initViewerNavButtons();
+      }
+
+      initViewerNavButtons() {
+        // In thumbnail layouts, only the active media is visible on desktop (all others are
+        // display:none), so the viewer isn't horizontally scrollable there and the prev/next
+        // buttons' default scroll behavior (slider-component in global.js) can't switch images.
+        // Route their clicks through setActiveMedia instead, the same path thumbnail clicks use.
+        if (!this.dataset.desktopLayout.includes('thumbnail')) return;
+        const viewerButtons = this.elements.viewer.querySelector('.slider-buttons');
+        if (!viewerButtons) return;
+        const prevButton = viewerButtons.querySelector('button[name="previous"]');
+        const nextButton = viewerButtons.querySelector('button[name="next"]');
+        const currentPageElement = viewerButtons.querySelector('.slider-counter--current');
+        if (!prevButton || !nextButton) return;
+
+        const navigate = (step) => {
+          if (!this.mql.matches) return;
+          const mediaItems = Array.from(this.elements.viewer.querySelectorAll('[data-media-id]'));
+          const activeIndex = mediaItems.findIndex((item) => item.classList.contains('is-active'));
+          if (activeIndex === -1) return;
+          const nextIndex = (activeIndex + step + mediaItems.length) % mediaItems.length;
+          this.setActiveMedia(mediaItems[nextIndex].dataset.mediaId, false);
+          if (currentPageElement) currentPageElement.textContent = nextIndex + 1;
+        };
+
+        prevButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          navigate(-1);
+        });
+        nextButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          navigate(1);
+        });
       }
 
       onSlideChanged(event) {

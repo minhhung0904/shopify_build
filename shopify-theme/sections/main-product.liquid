@@ -105,10 +105,33 @@
     #MainProduct-{{ section.id }} .accordion__content {
       font-size: 1.3rem;
     }
+
+    /* Clamp the product description to a few lines with an ellipsis;
+       the "Read more" button (product-description.js) removes the clamp. */
+    #MainProduct-{{ section.id }} .product__description--clamped {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      overflow: hidden;
+    }
+
+    #MainProduct-{{ section.id }} .product__description-toggle {
+      margin-top: 1rem;
+      display: block;
+    }
+
+    /* Show the main image viewer's prev/next arrows on tablet/desktop too
+       (they're wired up in media-gallery.js); by default this theme only
+       shows them below 750px. */
+    #MediaGallery-{{ section.id }}[data-desktop-layout*='thumbnail'] #GalleryViewer-{{ section.id }} > .slider-buttons {
+      display: flex;
+    }
   {%- endstyle -%}
 
   <script src="{{ 'product-info.js' | asset_url }}" defer="defer"></script>
   <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+  <script src="{{ 'product-description.js' | asset_url }}" defer="defer"></script>
   {%- if product.quantity_price_breaks_configured? -%}
     <script src="{{ 'show-more.js' | asset_url }}" defer="defer"></script>
     <script src="{{ 'price-per-item.js' | asset_url }}" defer="defer"></script>
@@ -322,9 +345,15 @@
                   </p>
                 {%- when 'description' -%}
                   {%- if product.description != blank -%}
-                    <div class="product__description rte quick-add-hidden" {{ block.shopify_attributes }}>
-                      {{ product.description }}
-                    </div>
+                    <product-description class="quick-add-hidden" {{ block.shopify_attributes }}>
+                      <div class="product__description product__description--clamped rte">
+                        {{ product.description }}
+                      </div>
+                      <button type="button" class="product__description-toggle link underlined-link" aria-expanded="false" hidden>
+                        <span class="label-show-more">{{ 'products.product.read_more' | t }}</span>
+                        <span class="label-show-less hidden">{{ 'products.product.read_less' | t }}</span>
+                      </button>
+                    </product-description>
                   {%- endif -%}
                 {%- when 'sku' -%}
                   <p

@@ -108,6 +108,8 @@
     "product": {
       "add_to_cart": "Thêm vào giỏ hàng",
       "description": "Mô tả",
+      "read_more": "Đọc thêm",
+      "read_less": "Thu gọn",
       "on_sale": "Giảm giá",
       "product_variants": "Mẫu mã sản phẩm",
       "social_proof": {
