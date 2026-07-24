@@ -333,7 +333,15 @@
                         assign bundle_breakdown = ''
 
                         if bundle_is_main
-                          assign bundle_marker = '|' | append: bundle_instance | append: '|'
+                          # Group/merge main lines by bundle instance AND product
+                          # — not by instance alone. A tiered bundle's main lines
+                          # are always the same product (different variants
+                          # merge into one row, as intended), but a combo
+                          # bundle's package can mix several DIFFERENT products
+                          # in one instance, and those must stay on their own
+                          # separate rows rather than being folded into one
+                          # row's breakdown text.
+                          assign bundle_marker = '|' | append: bundle_instance | append: '|' | append: item.product.id | append: '|'
                           if seen_bundle_instances contains bundle_marker
                             assign bundle_is_primary = false
                           else
@@ -344,7 +352,7 @@
                           assign group_original_total = 0
                           assign group_count = 0
                           for other in cart.items
-                            if other.properties['_bundle_instance'] == bundle_instance and other.properties['_bundle_role'] == 'main'
+                            if other.properties['_bundle_instance'] == bundle_instance and other.properties['_bundle_role'] == 'main' and other.product.id == item.product.id
                               assign other_unit_original = other.variant.price
                               if other.variant.compare_at_price and other.variant.compare_at_price > other.variant.price
                                 assign other_unit_original = other.variant.compare_at_price
