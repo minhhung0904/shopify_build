@@ -345,6 +345,118 @@
           <p class="bp-card__error" data-bundle-error role="alert"></p>
         </bundle-tiered>
 
+      {%- when 'combo' -%}
+        {%- comment -%}
+          Combo: same tier UI as `tiered`, but each unit slot lets the shopper
+          pick which MAIN product (not just which variant) fills it. `products`
+          is the resolved list of configured main products (list.product_reference
+          resolves fine here — no all_products workaround needed, unlike the
+          handle-based matching in bundle-product.liquid).
+        {%- endcomment -%}
+        <bundle-combo
+          class="bp-card__form bp-tiered"
+          data-bundle-handle="{{ handle }}"
+          data-bundle-title="{{ title | escape }}"
+          data-currency="{{ cart.currency.iso_code }}"
+          data-cart-add-url="{{ routes.cart_add_url }}"
+          data-cart-url="{{ routes.cart_url }}"
+        >
+          <script type="application/json" data-bp-products>
+            [
+              {%- assign combo_psep = '' -%}
+              {%- for p in products -%}
+                {%- assign pimg = p.featured_image -%}
+                {%- if pimg -%}
+                  {%- assign pimg_json = pimg | image_url: width: 200 | json -%}
+                {%- else -%}
+                  {%- assign pimg_json = 'null' -%}
+                {%- endif -%}
+                {{ combo_psep }}{"id":{{ p.id }},"title":{{ p.title | json }},"image":{{ pimg_json }},"variants":[
+                  {%- assign combo_vsep = '' -%}
+                  {%- for v in p.variants -%}
+                    {%- assign vimg = v.featured_image | default: p.featured_image -%}
+                    {%- if vimg -%}
+                      {%- assign vimg_json = vimg | image_url: width: 200 | json -%}
+                    {%- else -%}
+                      {%- assign vimg_json = 'null' -%}
+                    {%- endif -%}
+                    {{ combo_vsep }}{"id":{{ v.id }},"title":{{ v.title | json }},"price":{{ v.price }},"compareAtPrice":{{ v.compare_at_price | default: 0 }},"available":{{ v.available }},"image":{{ vimg_json }}}
+                    {%- assign combo_vsep = ',' -%}
+                  {%- endfor -%}
+                ]}
+                {%- assign combo_psep = ',' -%}
+              {%- endfor -%}
+            ]
+          </script>
+          <script type="application/json" data-bp-addons>
+            [
+              {%- comment -%} Add-ons resolved by handle (references don't resolve on storefront) {%- endcomment -%}
+              {%- assign addon_sep = '' -%}
+              {%- for h in config.addOnHandles -%}
+                {%- assign ap = all_products[h] -%}
+                {%- if ap != blank -%}
+                  {%- assign av = ap.selected_or_first_available_variant | default: ap.variants.first -%}
+                  {%- assign aimg = av.featured_image | default: ap.featured_image -%}
+                  {%- if aimg -%}
+                    {%- assign aimg_json = aimg | image_url: width: 120 | json -%}
+                  {%- else -%}
+                    {%- assign aimg_json = 'null' -%}
+                  {%- endif -%}
+                  {{ addon_sep }}{"id":{{ av.id }},"title":{{ ap.title | json }},"price":{{ av.price }},"compareAtPrice":{{ av.compare_at_price | default: 0 }},"available":{{ ap.available }},"image":{{ aimg_json }}}
+                  {%- assign addon_sep = ',' -%}
+                {%- endif -%}
+              {%- endfor -%}
+            ]
+          </script>
+          <script type="application/json" data-bp-addon-discount>
+            {"discountType":{{ config.addOnDiscountType | default: 'percentage' | json }},"discountValue":{{ config.addOnDiscountValue | default: 0 }}}
+          </script>
+
+          <ul class="bp-tierlist" role="list" data-bp-tiers>
+            {%- for tier in config.tiers -%}
+              <li
+                class="bp-tier2{% if tier.mostPopular %} is-popular{% endif %}"
+                data-tier-index="{{ forloop.index0 }}"
+                data-quantity="{{ tier.quantity }}"
+                data-discount-type="{{ tier.discountType }}"
+                data-discount-value="{{ tier.discountValue }}"
+              >
+                <label class="bp-tier2__head">
+                  <input
+                    type="radio"
+                    name="bp-tier-{{ block_id }}-{{ handle }}"
+                    class="bp-tier2__radio"
+                    value="{{ forloop.index0 }}"
+                    {% if tier.mostPopular %}checked{% endif %}
+                  >
+                  <span class="bp-tier2__info">
+                    <span class="bp-tier2__title">
+                      {{ tier.title | default: tier.quantity }}
+                      {%- if tier.discountValue > 0 -%}
+                        <span class="bp-tier2__savepill" data-bp-savepill></span>
+                      {%- endif -%}
+                    </span>
+                    <span class="bp-tier2__sub" data-bp-sub></span>
+                  </span>
+                  <span class="bp-tier2__prices">
+                    <span class="bp-tier2__now" data-bp-now></span>
+                    <s class="bp-tier2__was" data-bp-was></s>
+                  </span>
+                  {%- if tier.mostPopular -%}
+                    <img class="bp-tier2__ribbon" src="{{ 'most-popular.png' | asset_url }}" alt="Most Popular" loading="lazy" width="120" height="66" onerror="this.style.display='none'">
+                  {%- endif -%}
+                </label>
+                <div class="bp-tier2__body" data-bp-body hidden></div>
+              </li>
+            {%- endfor -%}
+          </ul>
+
+          <button type="button" class="bp-card__submit" data-bundle-submit>
+            Add to cart
+          </button>
+          <p class="bp-card__error" data-bundle-error role="alert"></p>
+        </bundle-combo>
+
       {%- else -%}
         {%- comment -%} fixed bundle: every product included {%- endcomment -%}
         {%- assign bundle_available = true -%}

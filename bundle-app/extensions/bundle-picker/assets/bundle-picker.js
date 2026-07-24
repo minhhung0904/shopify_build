@@ -686,9 +686,334 @@ class BundleTiered extends HTMLElement {
   }
 }
 
+// Combo: same tier-picker UI as BundleTiered, but each unit slot lets the
+// shopper pick which MAIN PRODUCT (not just which variant) fills it. State is
+// tracked as one { productId, variantId } pair per slot instead of a flat
+// array of variant ids.
+class BundleCombo extends HTMLElement {
+  connectedCallback() {
+    this.products = this.parseJSON('[data-bp-products]', []);
+    this.addOns = this.parseJSON('[data-bp-addons]', []);
+    this.addOnDiscount = this.parseJSON('[data-bp-addon-discount]', {
+      discountType: 'percentage',
+      discountValue: 0,
+    });
+    this.tierEls = Array.from(this.querySelectorAll('.bp-tier2'));
+    this.radios = Array.from(this.querySelectorAll('.bp-tier2__radio'));
+    this.submitBtn = this.querySelector('[data-bundle-submit]');
+    this.errorEl = this.querySelector('[data-bundle-error]');
+    if (!this.submitBtn || !this.tierEls.length || !this.products.length) return;
+
+    this.slots = []; // { productId, variantId } per main slot (selected tier)
+    this.addOnChecked = new Set(this.addOns.map((a) => String(a.id)));
+
+    this.radios.forEach((r) =>
+      r.addEventListener('change', () => this.selectTier()),
+    );
+    this.submitBtn.addEventListener('click', () => this.onSubmit());
+
+    const checked = this.radios.find((r) => r.checked) || this.radios[0];
+    checked.checked = true;
+    this.selectTier();
+  }
+
+  parseJSON(sel, fallback) {
+    const el = this.querySelector(sel);
+    if (!el) return fallback;
+    try {
+      return JSON.parse(el.textContent);
+    } catch {
+      return fallback;
+    }
+  }
+
+  findProduct(productId) {
+    return this.products.find((p) => String(p.id) === String(productId));
+  }
+
+  findVariant(productId, variantId) {
+    const product = this.findProduct(productId);
+    if (!product) return null;
+    return (
+      product.variants.find((v) => String(v.id) === String(variantId)) || null
+    );
+  }
+
+  availableVariants(product) {
+    const variants = (product && product.variants) || [];
+    const a = variants.filter((v) => v.available);
+    return a.length ? a : variants;
+  }
+
+  // Same rationale as BundleTiered: read savings against the true pre-markdown
+  // (compare-at) price, not an already-discounted live selling price.
+  originalUnitPrice(v) {
+    return v.compareAtPrice > v.price ? v.compareAtPrice : v.price;
+  }
+
+  defaultSlot() {
+    const product = this.products[0];
+    const avail = this.availableVariants(product);
+    return { productId: product?.id, variantId: avail[0]?.id };
+  }
+
+  selectedIndex() {
+    const r = this.radios.find((x) => x.checked) || this.radios[0];
+    return Number(r.value) || 0;
+  }
+
+  tierMeta(el) {
+    return {
+      quantity: Math.max(1, Number(el.dataset.quantity) || 1),
+      discountType: el.dataset.discountType,
+      discountValue: Number(el.dataset.discountValue) || 0,
+    };
+  }
+
+  selectTier() {
+    const idx = this.selectedIndex();
+    const tier = this.tierMeta(this.tierEls[idx]);
+    const template = this.defaultSlot();
+    this.slots = Array.from({ length: tier.quantity }, () => ({ ...template }));
+    this.tierEls.forEach((el, i) => {
+      const sel = i === idx;
+      el.classList.toggle('is-selected', sel);
+      const body = el.querySelector('[data-bp-body]');
+      if (!body) return;
+      body.hidden = !sel;
+      if (sel) this.renderBody(body, tier);
+      else body.innerHTML = '';
+    });
+    this.renderSummaries();
+  }
+
+  renderBody(body, tier) {
+    body.innerHTML = '';
+
+    const label = document.createElement('span');
+    label.className = 'bp-vlabel';
+    label.textContent = 'Product & variant';
+    body.appendChild(label);
+
+    // Two pickers per unit slot: which product, then which of its variants.
+    // Switching the product resets the variant to that product's first
+    // available one. Slots landing on the same variant collapse into a
+    // single cart line at submit time (see onSubmit).
+    for (let slot = 0; slot < tier.quantity; slot++) {
+      const row = document.createElement('div');
+      row.className = 'bp-vslot bp-vslot--combo';
+
+      const img = document.createElement('img');
+      img.className = 'bp-vslot__img';
+
+      const productSelect = document.createElement('select');
+      productSelect.className = 'bp-vslot__select';
+      this.products.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.title;
+        if (String(p.id) === String(this.slots[slot].productId)) opt.selected = true;
+        productSelect.appendChild(opt);
+      });
+
+      const variantSelect = document.createElement('select');
+      variantSelect.className = 'bp-vslot__select';
+
+      const populateVariants = () => {
+        variantSelect.innerHTML = '';
+        const product = this.findProduct(this.slots[slot].productId);
+        (product?.variants || []).forEach((v) => {
+          const opt = document.createElement('option');
+          opt.value = v.id;
+          opt.textContent = v.title;
+          if (!v.available) opt.disabled = true;
+          if (String(v.id) === String(this.slots[slot].variantId)) opt.selected = true;
+          variantSelect.appendChild(opt);
+        });
+      };
+      populateVariants();
+
+      const syncImg = () => {
+        const v = this.findVariant(this.slots[slot].productId, this.slots[slot].variantId);
+        const product = this.findProduct(this.slots[slot].productId);
+        const src = (v && v.image) || (product && product.image);
+        if (src) {
+          img.src = src;
+          img.alt = v ? v.title : product?.title || '';
+        } else {
+          img.removeAttribute('src');
+        }
+      };
+      syncImg();
+
+      productSelect.addEventListener('change', () => {
+        this.slots[slot].productId = productSelect.value;
+        const product = this.findProduct(this.slots[slot].productId);
+        const avail = this.availableVariants(product);
+        this.slots[slot].variantId = avail[0]?.id;
+        populateVariants();
+        syncImg();
+        this.renderSummaries();
+      });
+
+      variantSelect.addEventListener('change', () => {
+        this.slots[slot].variantId = variantSelect.value;
+        syncImg();
+        this.renderSummaries();
+      });
+
+      row.appendChild(img);
+      row.appendChild(productSelect);
+      row.appendChild(variantSelect);
+      body.appendChild(row);
+    }
+
+    if (this.addOns.length) {
+      const wrap = document.createElement('div');
+      wrap.className = 'bp-addons';
+      this.addOns.forEach((a) => {
+        const row = document.createElement('label');
+        row.className = 'bp-addon';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'bp-addon__cb';
+        if (a.available === false) {
+          cb.disabled = true;
+          this.addOnChecked.delete(String(a.id));
+        }
+        cb.checked = this.addOnChecked.has(String(a.id));
+        cb.addEventListener('change', () => {
+          if (cb.checked) this.addOnChecked.add(String(a.id));
+          else this.addOnChecked.delete(String(a.id));
+        });
+
+        const aimg = document.createElement('img');
+        aimg.className = 'bp-addon__img';
+        if (a.image) {
+          aimg.src = a.image;
+          aimg.alt = a.title;
+        }
+
+        const name = document.createElement('span');
+        name.className = 'bp-addon__name';
+        name.textContent = a.title;
+
+        const prices = document.createElement('span');
+        prices.className = 'bp-addon__prices';
+        const now = document.createElement('span');
+        now.className = 'bp-addon__now';
+        const disc = applyDiscount(
+          a.price,
+          this.addOnDiscount.discountType,
+          this.addOnDiscount.discountValue,
+        );
+        const original = this.originalUnitPrice(a);
+        now.textContent = formatMoney(disc, this.dataset.currency);
+        prices.appendChild(now);
+        if (disc < original) {
+          const was = document.createElement('s');
+          was.className = 'bp-addon__was';
+          was.textContent = formatMoney(original, this.dataset.currency);
+          prices.appendChild(was);
+        }
+
+        row.appendChild(cb);
+        row.appendChild(aimg);
+        row.appendChild(name);
+        row.appendChild(prices);
+        wrap.appendChild(row);
+      });
+      body.appendChild(wrap);
+    }
+  }
+
+  renderSummaries() {
+    const selIdx = this.selectedIndex();
+    this.tierEls.forEach((el, i) => {
+      const tier = this.tierMeta(el);
+      let liveTotal;
+      let originalTotal;
+      if (i === selIdx) {
+        liveTotal = this.slots.reduce((sum, s) => {
+          const v = this.findVariant(s.productId, s.variantId);
+          return sum + (v ? v.price : 0);
+        }, 0);
+        originalTotal = this.slots.reduce((sum, s) => {
+          const v = this.findVariant(s.productId, s.variantId);
+          return sum + (v ? this.originalUnitPrice(v) : 0);
+        }, 0);
+      } else {
+        const template = this.defaultSlot();
+        const v = this.findVariant(template.productId, template.variantId);
+        liveTotal = (v ? v.price : 0) * tier.quantity;
+        originalTotal = (v ? this.originalUnitPrice(v) : 0) * tier.quantity;
+      }
+      const now = applyDiscount(liveTotal, tier.discountType, tier.discountValue);
+      const was = originalTotal;
+      const saved = Math.max(0, was - now);
+
+      const nowEl = el.querySelector('[data-bp-now]');
+      const wasEl = el.querySelector('[data-bp-was]');
+      const subEl = el.querySelector('[data-bp-sub]');
+      const pillEl = el.querySelector('[data-bp-savepill]');
+
+      if (nowEl) nowEl.textContent = formatMoney(now, this.dataset.currency);
+      if (wasEl) {
+        const show = now < was;
+        wasEl.textContent = show ? formatMoney(was, this.dataset.currency) : '';
+        wasEl.style.display = show ? '' : 'none';
+      }
+      if (subEl) {
+        if (saved > 0) {
+          const pct = was > 0 ? Math.round((saved / was) * 100) : 0;
+          subEl.textContent = `You save ${pct}%`;
+        } else {
+          subEl.textContent = 'Standard price';
+        }
+      }
+      if (pillEl) {
+        pillEl.textContent =
+          saved > 0 ? `SAVE ${formatMoney(saved, this.dataset.currency)}` : '';
+        pillEl.style.display = saved > 0 ? '' : 'none';
+      }
+    });
+  }
+
+  onSubmit() {
+    const lines = [];
+
+    // Same collapsing rule as BundleTiered: slots that land on the same
+    // variant (even across different products picking the same SKU) combine
+    // into one cart line with quantity > 1.
+    const mainQuantities = new Map();
+    this.slots
+      .filter((s) => s.variantId != null)
+      .forEach((s) =>
+        mainQuantities.set(s.variantId, (mainQuantities.get(s.variantId) || 0) + 1),
+      );
+    mainQuantities.forEach((quantity, id) => lines.push({ id, quantity, role: 'main' }));
+
+    this.addOns
+      .filter((a) => this.addOnChecked.has(String(a.id)))
+      .forEach((a) => lines.push({ id: a.id, quantity: 1, role: 'addon' }));
+    if (!lines.length) return;
+    addBundleToCart({
+      lines,
+      bundleHandle: this.dataset.bundleHandle,
+      bundleTitle: this.dataset.bundleTitle,
+      cartAddUrl: this.dataset.cartAddUrl,
+      cartUrl: this.dataset.cartUrl,
+      submitBtn: this.submitBtn,
+      errorEl: this.errorEl,
+    });
+  }
+}
+
 customElements.define('bundle-add-to-cart', BundleFixed);
 customElements.define('bundle-mix-match', BundleMixMatch);
 customElements.define('bundle-volume', BundleVolume);
 customElements.define('bundle-multipack', BundleMultipack);
 customElements.define('bundle-bogo', BundleBogo);
+customElements.define('bundle-combo', BundleCombo);
 customElements.define('bundle-tiered', BundleTiered);

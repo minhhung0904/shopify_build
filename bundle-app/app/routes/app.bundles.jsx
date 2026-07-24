@@ -69,6 +69,13 @@ const BUNDLE_TYPES = [
     description:
       "Buy products from one set and get products from another free or discounted.",
   },
+  {
+    value: "combo",
+    label: "Combo bundle",
+    tagline: "Its own standalone product",
+    description:
+      "Attach to a placeholder product so it shows in your catalog like a normal item. Shoppers pick a package (buy 1/2/3…), then choose a product + variant for each slot, plus optional add-ons.",
+  },
 ];
 
 const DISCOUNT_TYPES = [
@@ -89,6 +96,8 @@ const usesMinMax = (type) => ["mix_match", "variant"].includes(type);
 const usesMinOnly = (type) => type === "infinite";
 const usesSingleProduct = (type) =>
   ["volume", "multipack", "variant", "tiered"].includes(type);
+const usesTiers = (type) => ["tiered", "combo"].includes(type);
+const usesDisplayProduct = (type) => type === "combo";
 
 const emptyForm = {
   handle: "",
@@ -105,6 +114,7 @@ const emptyForm = {
   sortOrder: "0",
   accentColor: "#FFCB05",
   selectedProducts: [],
+  displayProduct: null,
   volumeTiers: [{ minQuantity: "2", discountType: "percentage", value: "10" }],
   // multipack
   packSize: "3",
@@ -286,6 +296,22 @@ function buildIndexEntry(node) {
     };
   }
 
+  if (type === "combo") {
+    const tiers = (config.tiers || []).map((t) => ({
+      quantity: Number(t.quantity) || 1,
+      discountType: t.discountType || "percentage",
+      discountValue: Number(t.discountValue) || 0,
+    }));
+    return {
+      type,
+      mainProductIds: productIds,
+      tiers,
+      addOnProductIds: rewardIds,
+      addOnDiscountType: config.addOnDiscountType || "percentage",
+      addOnDiscountValue: Number(config.addOnDiscountValue || 0),
+    };
+  }
+
   const entry = {
     type,
     productIds,
@@ -439,8 +465,12 @@ export const action = async ({ request }) => {
 
   if (bundleType === "volume") {
     fields.push({ key: "volume_tiers", value: volumeTiers });
-  } else if (bundleType === "bogo" || bundleType === "tiered") {
-    // bogo: "get" products; tiered: add-on products — both live in reward_products
+  } else if (
+    bundleType === "bogo" ||
+    bundleType === "tiered" ||
+    bundleType === "combo"
+  ) {
+    // bogo: "get" products; tiered/combo: add-on products — all live in reward_products
     fields.push({
       key: "reward_products",
       value: JSON.stringify(rewardProductIds),
@@ -490,7 +520,7 @@ function formatDiscount(bundle) {
     }
     return `${tiers.length} volume tier${tiers.length === 1 ? "" : "s"}`;
   }
-  if (type === "tiered") {
+  if (type === "tiered" || type === "combo") {
     let config = {};
     try {
       config = JSON.parse(bundle.config?.value || "{}");
@@ -498,7 +528,8 @@ function formatDiscount(bundle) {
       config = {};
     }
     const n = (config.tiers || []).length;
-    return `${n} tier${n === 1 ? "" : "s"} (Bundle & Save)`;
+    const suffix = type === "tiered" ? " (Bundle & Save)" : " (Combo)";
+    return `${n} tier${n === 1 ? "" : "s"}${suffix}`;
   }
   if (type === "bogo") {
     let config = {};
@@ -532,9 +563,10 @@ function formatFormDiscount(form) {
     const n = form.volumeTiers.length;
     return `${n} volume tier${n === 1 ? "" : "s"}`;
   }
-  if (form.bundleType === "tiered") {
+  if (form.bundleType === "tiered" || form.bundleType === "combo") {
     const n = form.tieredTiers.length;
-    return `${n} tier${n === 1 ? "" : "s"} (Bundle & Save)`;
+    const suffix = form.bundleType === "tiered" ? " (Bundle & Save)" : " (Combo)";
+    return `${n} tier${n === 1 ? "" : "s"}${suffix}`;
   }
   if (form.bundleType === "bogo") {
     const reward =
@@ -641,7 +673,8 @@ function StorefrontPreview({ form }) {
   const addOns = form.rewardProducts || [];
 
   let inner;
-  if (form.bundleType === "tiered") {
+  if (form.bundleType === "tiered" || form.bundleType === "combo") {
+    const isCombo = form.bundleType === "combo";
     const tiers = form.tieredTiers || [];
     const selIdx = Math.max(0, tiers.findIndex((t) => t.mostPopular));
     inner = (
@@ -695,8 +728,17 @@ function StorefrontPreview({ form }) {
                       <div className="bpv-vslot" key={s}>
                         <span className="bpv-vslot__img" />
                         <select className="bpv-vslot__sel" disabled>
-                          <option>{firstProduct}</option>
+                          <option>
+                            {isCombo
+                              ? products[s % products.length]?.title || firstProduct
+                              : firstProduct}
+                          </option>
                         </select>
+                        {isCombo ? (
+                          <select className="bpv-vslot__sel" disabled>
+                            <option>Variant</option>
+                          </select>
+                        ) : null}
                       </div>
                     ))}
                     {addOns.length > 0 ? (
@@ -853,6 +895,7 @@ export default function Bundles() {
         title: p.title,
         handle: p.handle,
       })),
+      displayProduct: config.displayProduct || null,
       volumeTiers,
       packSize: config.packSize != null ? String(config.packSize) : "3",
       buyQuantity: config.buyQuantity != null ? String(config.buyQuantity) : "1",
@@ -919,6 +962,21 @@ export default function Bundles() {
     });
     if (selected) {
       setForm((prev) => ({ ...prev, rewardProducts: selected }));
+    }
+  };
+
+  const pickDisplayProduct = async () => {
+    const selected = await shopify.resourcePicker({
+      type: "product",
+      multiple: false,
+      selectionIds: form.displayProduct ? [{ id: form.displayProduct.id }] : [],
+    });
+    if (selected && selected[0]) {
+      const p = selected[0];
+      setForm((prev) => ({
+        ...prev,
+        displayProduct: { id: p.id, title: p.title, handle: p.handle },
+      }));
     }
   };
 
@@ -1000,8 +1058,8 @@ export default function Bundles() {
         rewardDiscountValue: Number(form.rewardDiscountValue) || 0,
       };
     }
-    if (form.bundleType === "tiered") {
-      return {
+    if (form.bundleType === "tiered" || form.bundleType === "combo") {
+      const withTiers = {
         ...base,
         tiers: form.tieredTiers.map((t) => ({
           title: t.title,
@@ -1013,6 +1071,10 @@ export default function Bundles() {
         addOnDiscountType: form.rewardDiscountType,
         addOnDiscountValue: Number(form.rewardDiscountValue) || 0,
       };
+      if (form.bundleType === "combo") {
+        withTiers.displayProduct = form.displayProduct;
+      }
+      return withTiers;
     }
     return base;
   };
@@ -1066,6 +1128,7 @@ export default function Bundles() {
       );
     }
     if (form.selectedProducts.length === 0) return false;
+    if (usesDisplayProduct(form.bundleType) && !form.displayProduct) return false;
     if (usesMinMax(form.bundleType)) {
       return Number(form.minItems) <= Number(form.maxItems);
     }
@@ -1081,6 +1144,7 @@ export default function Bundles() {
     volume: "Choose product",
     tiered: "Choose the product",
     bogo: "Choose “Buy” products",
+    combo: "Choose main products",
   }[form.bundleType];
 
   // ---------------------------------------------------------------- LIST VIEW
@@ -1417,7 +1481,7 @@ export default function Bundles() {
             </s-stack>
           ) : null}
 
-          {form.bundleType === "tiered" ? (
+          {usesTiers(form.bundleType) ? (
             <s-stack direction="block" gap="base">
               <s-text>Tiers — each tier is a number of units at a discount</s-text>
               {form.tieredTiers.map((tier, index) => (
@@ -1485,7 +1549,7 @@ export default function Bundles() {
             </s-stack>
           ) : null}
 
-          {form.bundleType === "tiered" ? (
+          {usesTiers(form.bundleType) ? (
             <s-stack direction="block" gap="base">
               <s-text type="strong">
                 Add-on products (optional — shown as checkboxes under the
@@ -1576,6 +1640,30 @@ export default function Bundles() {
                   {form.rewardProducts.length > 0
                     ? form.rewardProducts.map((p) => p.title).join(", ")
                     : "No reward products selected"}
+                </s-text>
+              </s-stack>
+            </s-stack>
+          ) : null}
+
+          {usesDisplayProduct(form.bundleType) ? (
+            <s-stack direction="block" gap="small-300">
+              <s-text type="strong">Display product</s-text>
+              <s-paragraph color="subdued">
+                Pick an existing Shopify product to act as this bundle&apos;s
+                storefront listing. It shows in your catalog/collections like
+                a normal product; visiting its page shows this combo picker
+                instead of the usual buy box.
+              </s-paragraph>
+              <s-stack direction="inline" gap="base" alignItems="center">
+                <s-button onClick={pickDisplayProduct}>
+                  {form.displayProduct
+                    ? "Change display product"
+                    : "Choose display product"}
+                </s-button>
+                <s-text>
+                  {form.displayProduct
+                    ? form.displayProduct.title
+                    : "No display product selected"}
                 </s-text>
               </s-stack>
             </s-stack>

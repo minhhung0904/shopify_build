@@ -272,6 +272,9 @@
   .bundle-picker-{{ scope }} .bp-vslot__img { width: 3.4rem; height: 3.4rem; flex: 0 0 auto; border-radius: 0.5rem; object-fit: cover; background: color-mix(in srgb, var(--bp-card-text) 12%, transparent); }
   .bundle-picker-{{ scope }} .bp-vslot__img:not([src]) { visibility: hidden; }
   .bundle-picker-{{ scope }} .bp-vslot__select { flex: 0 1 18rem; padding: 0.6rem 0.8rem; border-radius: 0.6rem; border: 1px solid var(--bp-border); background: color-mix(in srgb, var(--bp-card-text) 6%, var(--bp-card-bg)); color: var(--bp-card-text); font-size: 1.25rem; font-weight: 600; }
+  {%- comment -%} Combo bundles show a product select + a variant select per slot; let the row wrap on narrow widths instead of overflowing. {%- endcomment -%}
+  .bundle-picker-{{ scope }} .bp-vslot--combo { flex-wrap: wrap; }
+  .bundle-picker-{{ scope }} .bp-vslot--combo .bp-vslot__select { flex: 1 1 14rem; min-width: 0; }
   .bundle-picker-{{ scope }} .bp-addons { margin: 0.8rem -1.2rem -1.2rem; background: color-mix(in srgb, var(--bp-card-text) 5%, var(--bp-card-bg)); color: var(--bp-card-text); }
   .bundle-picker-{{ scope }} .bp-addon { display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1.2rem; cursor: pointer; border-top: 1px solid var(--bp-border); }
   .bundle-picker-{{ scope }} .bp-addon:first-child { border-top: 0; }
