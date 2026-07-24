@@ -10,11 +10,20 @@
   so we match on the product HANDLES the app stores in the config JSON
   (config.productHandles). The current page product must be one of them.
 {%- endcomment -%}
+{%- comment -%}
+  Combo bundles are the exception: they're attached to a standalone "display"
+  product (their own catalog listing), not to one of their configured main
+  products, so they match on cfg.displayProduct.handle instead.
+{%- endcomment -%}
 {%- assign matched = false -%}
 {%- for bundle in shop.metaobjects["$app:bundle"].values -%}
   {%- if bundle.status.value == "active" and matched == false -%}
     {%- assign cfg = bundle.config.value -%}
-    {%- if cfg.productHandles contains product.handle -%}
+    {%- if bundle.bundle_type.value == "combo" -%}
+      {%- if cfg.displayProduct.handle == product.handle -%}
+        {%- assign matched = bundle -%}
+      {%- endif -%}
+    {%- elsif cfg.productHandles contains product.handle -%}
       {%- assign matched = bundle -%}
     {%- endif -%}
   {%- endif -%}
@@ -23,6 +32,14 @@
 {%- if matched -%}
   {%- assign matched_config = matched.config.value -%}
   {%- assign bundle_accent = matched_config.accentColor | default: block.settings.accent_color -%}
+
+  {%- comment -%}
+    Combo bundles' price block override (showing the smallest package's "from"
+    price instead of the display product's own price) is computed in
+    sections/main-product.liquid, alongside the bundle_matched check that
+    hides the standard variant/quantity/buy-buttons blocks — not here, since
+    this app block can't reach into a sibling theme block's rendered output.
+  {%- endcomment -%}
   {%- render 'bundle-picker-css',
     scope: block.id,
     bg: block.settings.background_color,
@@ -43,6 +60,7 @@
       display: flex;
       align-items: center;
       gap: 1.2rem;
+      font-family: var(--font-heading-family, inherit);
       font-size: 1.7rem;
       font-weight: 800;
       letter-spacing: 0.02em;
@@ -85,14 +103,19 @@
   <div {{ block.shopify_attributes }} style="padding:1.6rem;border:1px dashed #c9c9c9;border-radius:8px;color:#374151;font-size:1.3rem;line-height:1.6;">
     <strong>Bundle on product — debug (editor only)</strong><br>
     Current product.handle = <code>{{ product.handle }}</code><br>
-    No active bundle lists this product handle in config.productHandles. Bundles found:
+    No active bundle lists this product handle in config.productHandles (or, for combo bundles, as its config.displayProduct.handle). Bundles found:
     <ul style="margin:0.6rem 0 0;padding-left:1.6rem;">
       {%- for b in shop.metaobjects["$app:bundle"].values -%}
         {%- assign dbg_cfg = b.config.value -%}
         <li>
-          &ldquo;{{ b.title.value }}&rdquo; · status=<code>{{ b.status.value }}</code>
-          · productHandles=<code>{{ dbg_cfg.productHandles | join: ', ' }}</code>
-          {%- if dbg_cfg.productHandles contains product.handle %} ← MATCH{% endif -%}
+          &ldquo;{{ b.title.value }}&rdquo; · status=<code>{{ b.status.value }}</code> · type=<code>{{ b.bundle_type.value }}</code>
+          {%- if b.bundle_type.value == "combo" -%}
+            · displayProduct.handle=<code>{{ dbg_cfg.displayProduct.handle }}</code>
+            {%- if dbg_cfg.displayProduct.handle == product.handle %} ← MATCH{% endif -%}
+          {%- else -%}
+            · productHandles=<code>{{ dbg_cfg.productHandles | join: ', ' }}</code>
+            {%- if dbg_cfg.productHandles contains product.handle %} ← MATCH{% endif -%}
+          {%- endif -%}
         </li>
       {%- else -%}
         <li>(no bundles returned by shop.metaobjects["$app:bundle"])</li>

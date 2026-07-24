@@ -1,0 +1,89 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "100.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/70",
+              "product": { "id": "gid://shopify/Product/70" }
+            },
+            "bundleHandle": { "value": "bundle-combo-1" },
+            "bundleInstance": { "value": "instance-21" }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "120.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/81",
+              "product": { "id": "gid://shopify/Product/71" }
+            },
+            "bundleHandle": { "value": "bundle-combo-1" },
+            "bundleInstance": { "value": "instance-21" }
+          },
+          {
+            "id": "gid://shopify/CartLine/2",
+            "quantity": 1,
+            "cost": { "subtotalAmount": { "amount": "30.0" } },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/90",
+              "product": { "id": "gid://shopify/Product/90" }
+            },
+            "bundleHandle": { "value": "bundle-combo-1" },
+            "bundleInstance": { "value": "instance-21" }
+          }
+        ]
+      },
+      "discount": { "discountClasses": ["PRODUCT"] },
+      "shop": {
+        "bundleIndex": {
+          "jsonValue": {
+            "bundle-combo-1": {
+              "type": "combo",
+              "mainProductIds": ["gid://shopify/Product/70", "gid://shopify/Product/71"],
+              "tiers": [
+                { "quantity": 1, "discountType": "percentage", "discountValue": 0 },
+                { "quantity": 2, "discountType": "percentage", "discountValue": 15 }
+              ],
+              "addOnProductIds": ["gid://shopify/Product/90"],
+              "addOnDiscountType": "percentage",
+              "addOnDiscountValue": 50
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "operations": [
+        {
+          "productDiscountsAdd": {
+            "candidates": [
+              {
+                "message": "Bundle discount",
+                "targets": [
+                  { "cartLine": { "id": "gid://shopify/CartLine/0" } },
+                  { "cartLine": { "id": "gid://shopify/CartLine/1" } }
+                ],
+                "value": { "percentage": { "value": 15.0 } }
+              },
+              {
+                "message": "Bundle discount",
+                "targets": [
+                  { "cartLine": { "id": "gid://shopify/CartLine/2" } }
+                ],
+                "value": { "percentage": { "value": 50.0 } }
+              }
+            ],
+            "selectionStrategy": "ALL"
+          }
+        }
+      ]
+    }
+  }
+}

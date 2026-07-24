@@ -1,0 +1,116 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "27fcc3ea1ba84619084725dee95a9945"
+application_url = "https://smart-bundle.onrender.com"
+embedded = true
+name = "Smart Bundle"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,write_metaobjects,write_metaobject_definitions,write_discounts"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[metaobjects.app.bundle]
+name = "Bundle"
+display_name_field = "title"
+
+  [metaobjects.app.bundle.access]
+  admin = "merchant_read_write"
+  storefront = "public_read"
+
+[metaobjects.app.bundle.fields.title]
+name = "Title"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.badge_text]
+name = "Badge text"
+type = "single_line_text_field"
+
+[metaobjects.app.bundle.fields.image]
+name = "Image"
+type = "file_reference"
+
+[metaobjects.app.bundle.fields.products]
+name = "Products"
+type = "list.product_reference"
+required = true
+
+[metaobjects.app.bundle.fields.price]
+name = "Bundle price"
+type = "number_decimal"
+
+[metaobjects.app.bundle.fields.description]
+name = "Description"
+type = "multi_line_text_field"
+
+[metaobjects.app.bundle.fields.bundle_type]
+name = "Bundle type"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.discount_type]
+name = "Discount type"
+type = "single_line_text_field"
+
+[metaobjects.app.bundle.fields.discount_value]
+name = "Discount value"
+type = "number_decimal"
+
+[metaobjects.app.bundle.fields.volume_tiers]
+name = "Volume tiers"
+type = "json"
+
+[metaobjects.app.bundle.fields.min_items]
+name = "Minimum items"
+type = "number_integer"
+
+[metaobjects.app.bundle.fields.max_items]
+name = "Maximum items"
+type = "number_integer"
+
+[metaobjects.app.bundle.fields.status]
+name = "Status"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.bundle.fields.sort_order]
+name = "Sort order"
+type = "number_integer"
+
+# --- Phase 1 additions ---
+
+# BOGO "get" set: the products the shopper receives at a reward discount.
+[metaobjects.app.bundle.fields.reward_products]
+name = "Reward products"
+type = "list.product_reference"
+
+# Type-specific settings stored as JSON.
+# BOGO: { buyQuantity, getQuantity, rewardDiscountType, rewardDiscountValue }
+# Multipack: { packSize }
+[metaobjects.app.bundle.fields.config]
+name = "Type config"
+type = "json"
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+  [webhooks.privacy_compliance]
+  customer_deletion_url = "/webhooks/customers/redact"
+  customer_data_request_url = "/webhooks/customers/data_request"
+  shop_deletion_url = "/webhooks/shop/redact"
+
+[auth]
+redirect_urls = [ "https://smart-bundle.onrender.com/auth/callback" ]
+
+[build]
+automatically_update_urls_on_dev = true

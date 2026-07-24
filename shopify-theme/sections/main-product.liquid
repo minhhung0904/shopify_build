@@ -105,10 +105,33 @@
     #MainProduct-{{ section.id }} .accordion__content {
       font-size: 1.3rem;
     }
+
+    /* Clamp the product description to a few lines with an ellipsis;
+       the "Read more" button (product-description.js) removes the clamp. */
+    #MainProduct-{{ section.id }} .product__description--clamped {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      overflow: hidden;
+    }
+
+    #MainProduct-{{ section.id }} .product__description-toggle {
+      margin-top: 1rem;
+      display: block;
+    }
+
+    /* Show the main image viewer's prev/next arrows on tablet/desktop too
+       (they're wired up in media-gallery.js); by default this theme only
+       shows them below 750px. */
+    #MediaGallery-{{ section.id }}[data-desktop-layout*='thumbnail'] #GalleryViewer-{{ section.id }} > .slider-buttons {
+      display: flex;
+    }
   {%- endstyle -%}
 
   <script src="{{ 'product-info.js' | asset_url }}" defer="defer"></script>
   <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+  <script src="{{ 'product-description.js' | asset_url }}" defer="defer"></script>
   {%- if product.quantity_price_breaks_configured? -%}
     <script src="{{ 'show-more.js' | asset_url }}" defer="defer"></script>
     <script src="{{ 'price-per-item.js' | asset_url }}" defer="defer"></script>
@@ -166,14 +189,84 @@
               bundle-product.liquid). From a plain theme file it's nil, so we
               use the fully-qualified app-owned metaobject type instead.
             {%- endcomment -%}
+            {%- comment -%}
+              App-owned metaobject types are namespaced by the app's numeric
+              id (app--<id>--bundle). When the store switches to a different
+              bundle app the id changes, so we probe every known id here.
+              Find the current id in Admin > Settings > Custom data >
+              Metaobjects > "Bundle" (its "type" reads app--<id>--bundle) and
+              add it to this comma-separated list.
+            {%- endcomment -%}
+            {%- comment -%}
+              Combo bundles are the exception: the CURRENT page product is the
+              bundle's own standalone display product (not one of its main
+              products — those keep their own normal, independently-purchasable
+              product pages), matched by config.displayProduct.handle instead
+              of config.productHandles. When matched, also compute the "from"
+              price (cheapest main product/variant at the smallest tier) so the
+              price block below can show it instead of the display product's
+              own (irrelevant) price.
+            {%- endcomment -%}
             {%- assign bundle_matched = false -%}
-            {%- for bundle in shop.metaobjects["app--395796512769--bundle"].values -%}
-              {%- if bundle.status.value == "active" and bundle_matched == false -%}
-                {%- assign bundle_cfg = bundle.config.value -%}
-                {%- if bundle_cfg.productHandles contains product.handle -%}
-                  {%- assign bundle_matched = true -%}
+            {%- assign combo_from_price_cents = 0 -%}
+            {%- assign bundle_app_ids = "395796512769,399662219265" | split: "," -%}
+            {%- for bundle_app_id in bundle_app_ids -%}
+              {%- assign bundle_type = "app--" | append: bundle_app_id | append: "--bundle" -%}
+              {%- for bundle in shop.metaobjects[bundle_type].values -%}
+                {%- if bundle.status.value == "active" and bundle_matched == false -%}
+                  {%- assign bundle_cfg = bundle.config.value -%}
+                  {%- if bundle.bundle_type.value == "combo" -%}
+                    {%- if bundle_cfg.displayProduct.handle == product.handle -%}
+                      {%- assign bundle_matched = true -%}
+                      {%- assign combo_cheapest_cents = -1 -%}
+                      {%- for combo_main_handle in bundle_cfg.productHandles -%}
+                        {%- assign combo_main_product = all_products[combo_main_handle] -%}
+                        {%- if combo_main_product != blank -%}
+                          {%- assign combo_main_variant = combo_main_product.selected_or_first_available_variant | default: combo_main_product.variants.first -%}
+                          {%- if combo_main_variant != blank -%}
+                            {%- if combo_cheapest_cents == -1 -%}
+                              {%- assign combo_cheapest_cents = combo_main_variant.price -%}
+                            {%- elsif combo_main_variant.price < combo_cheapest_cents -%}
+                              {%- assign combo_cheapest_cents = combo_main_variant.price -%}
+                            {%- endif -%}
+                          {%- endif -%}
+                        {%- endif -%}
+                      {%- endfor -%}
+                      {%- if combo_cheapest_cents >= 0 -%}
+                        {%- assign combo_smallest_qty = 0 -%}
+                        {%- assign combo_smallest_tier = blank -%}
+                        {%- for combo_tier in bundle_cfg.tiers -%}
+                          {%- if combo_smallest_tier == blank -%}
+                            {%- assign combo_smallest_qty = combo_tier.quantity -%}
+                            {%- assign combo_smallest_tier = combo_tier -%}
+                          {%- elsif combo_tier.quantity < combo_smallest_qty -%}
+                            {%- assign combo_smallest_qty = combo_tier.quantity -%}
+                            {%- assign combo_smallest_tier = combo_tier -%}
+                          {%- endif -%}
+                        {%- endfor -%}
+                        {%- if combo_smallest_tier != blank -%}
+                          {%- assign combo_tier_cents = combo_cheapest_cents | times: combo_smallest_qty -%}
+                          {%- assign combo_from_price_cents = combo_tier_cents -%}
+                          {%- if combo_smallest_tier.discountType == "percentage" -%}
+                            {%- assign combo_discount_cents = combo_tier_cents | times: combo_smallest_tier.discountValue | divided_by: 100.0 | round -%}
+                            {%- assign combo_from_price_cents = combo_tier_cents | minus: combo_discount_cents -%}
+                          {%- elsif combo_smallest_tier.discountType == "fixed_amount" -%}
+                            {%- assign combo_discount_cents = combo_smallest_tier.discountValue | times: 100 -%}
+                            {%- assign combo_from_price_cents = combo_tier_cents | minus: combo_discount_cents -%}
+                          {%- elsif combo_smallest_tier.discountType == "fixed_price" -%}
+                            {%- assign combo_from_price_cents = combo_smallest_tier.discountValue | times: 100 -%}
+                          {%- endif -%}
+                          {%- if combo_from_price_cents < 0 -%}
+                            {%- assign combo_from_price_cents = 0 -%}
+                          {%- endif -%}
+                        {%- endif -%}
+                      {%- endif -%}
+                    {%- endif -%}
+                  {%- elsif bundle_cfg.productHandles contains product.handle -%}
+                    {%- assign bundle_matched = true -%}
+                  {%- endif -%}
                 {%- endif -%}
-              {%- endif -%}
+              {%- endfor -%}
             {%- endfor -%}
 
             {%- for block in section.blocks -%}
@@ -238,12 +331,20 @@
                   </div>
                 {%- when 'price' -%}
                   <div id="price-{{ section.id }}" role="status" {{ block.shopify_attributes }}>
-                    {%- render 'price',
-                      product: product,
-                      use_variant: true,
-                      show_badges: true,
-                      price_class: 'price--large'
-                    -%}
+                    {%- if combo_from_price_cents > 0 -%}
+                      {%- render 'price',
+                        product: product,
+                        price_class: 'price--large',
+                        combo_from_price: combo_from_price_cents
+                      -%}
+                    {%- else -%}
+                      {%- render 'price',
+                        product: product,
+                        use_variant: true,
+                        show_badges: true,
+                        price_class: 'price--large'
+                      -%}
+                    {%- endif -%}
                   </div>
                   {%- if product.quantity_price_breaks_configured? -%}
                     <div class="volume-pricing-note" id="Volume-Note-{{ section.id }}">
@@ -310,9 +411,15 @@
                   </p>
                 {%- when 'description' -%}
                   {%- if product.description != blank -%}
-                    <div class="product__description rte quick-add-hidden" {{ block.shopify_attributes }}>
-                      {{ product.description }}
-                    </div>
+                    <product-description class="quick-add-hidden" {{ block.shopify_attributes }}>
+                      <div class="product__description product__description--clamped rte">
+                        {{ product.description }}
+                      </div>
+                      <button type="button" class="product__description-toggle link underlined-link" aria-expanded="false" hidden>
+                        <span class="label-show-more">{{ 'products.product.read_more' | t }}</span>
+                        <span class="label-show-less hidden">{{ 'products.product.read_less' | t }}</span>
+                      </button>
+                    </product-description>
                   {%- endif -%}
                 {%- when 'sku' -%}
                   <p

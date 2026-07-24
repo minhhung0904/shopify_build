@@ -110,6 +110,8 @@
       "choose_options": "Choose options",
       "choose_product_options": "Choose options for {{ product_name }}",
       "description": "Description",
+      "read_more": "Read more",
+      "read_less": "Read less",
       "inventory_in_stock": "In stock",
       "inventory_in_stock_show_count": "{{ quantity }} in stock",
       "inventory_low_stock": "Low stock",

@@ -119,6 +119,47 @@ function buildCandidate(bundle, lines) {
     return candidates.length ? candidates : null;
   }
 
+  // Combo: same tiered "buy more, save more" math as `tiered`, except the
+  // main slot can be filled by any of several configured products (not just
+  // one) — so membership is checked against a set instead of a single id.
+  if (bundle.type === 'combo') {
+    const mainSet = new Set(bundle.mainProductIds || []);
+    const addOnSet = new Set(bundle.addOnProductIds || []);
+    const mainLines = lines.filter((line) =>
+      mainSet.has(line.merchandise?.product?.id),
+    );
+    const addOnLines = lines.filter((line) =>
+      addOnSet.has(line.merchandise?.product?.id),
+    );
+    const mainUnits = mainLines.reduce((sum, line) => sum + line.quantity, 0);
+    const tier = pickTieredTier(bundle.tiers, mainUnits);
+
+    const candidates = [];
+    if (tier) {
+      let main;
+      if (tier.discountType === 'fixed_price') {
+        const mainSubtotal = mainLines.reduce(
+          (sum, line) => sum + Number(line.cost.subtotalAmount.amount),
+          0,
+        );
+        const amount = Math.max(0, mainSubtotal - (Number(tier.discountValue) || 0));
+        main = amount > 0 ? discountCandidate(mainLines, 'fixed_amount', amount) : null;
+      } else {
+        main = discountCandidate(mainLines, tier.discountType, tier.discountValue);
+      }
+      if (main) candidates.push(main);
+    }
+    if (addOnLines.length) {
+      const addOn = discountCandidate(
+        addOnLines,
+        bundle.addOnDiscountType,
+        bundle.addOnDiscountValue,
+      );
+      if (addOn) candidates.push(addOn);
+    }
+    return candidates.length ? candidates : null;
+  }
+
   // BOGO discounts only the "get" lines; the "buy" lines stay full price.
   if (bundle.type === 'bogo') {
     const getSet = new Set(bundle.getProductIds || []);
@@ -179,6 +220,25 @@ function isValidGroup(bundle, lines) {
     }
     const mainUnits = lines
       .filter((line) => line.merchandise?.product?.id === bundle.productId)
+      .reduce((sum, line) => sum + line.quantity, 0);
+    const tiers = bundle.tiers || [];
+    if (!tiers.length) return false;
+    const smallest = Math.min(...tiers.map((t) => Number(t.quantity) || 1));
+    return mainUnits >= smallest;
+  }
+
+  // Combo: every line must be one of the configured main products or a
+  // configured add-on, and the MAIN units must reach at least the smallest tier.
+  if (bundle.type === 'combo') {
+    const mainSet = new Set(bundle.mainProductIds || []);
+    const addOnSet = new Set(bundle.addOnProductIds || []);
+    if (
+      productIds.some((id) => !id || (!mainSet.has(id) && !addOnSet.has(id)))
+    ) {
+      return false;
+    }
+    const mainUnits = lines
+      .filter((line) => mainSet.has(line.merchandise?.product?.id))
       .reduce((sum, line) => sum + line.quantity, 0);
     const tiers = bundle.tiers || [];
     if (!tiers.length) return false;
