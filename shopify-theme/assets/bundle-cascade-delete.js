@@ -12,10 +12,6 @@
   if (window.__bundleCascadeDeleteInit) return;
   window.__bundleCascadeDeleteInit = true;
 
-  function lineKeyOf(row) {
-    return row?.querySelector('[data-quantity-line-key]')?.dataset.quantityLineKey;
-  }
-
   function indexOf(row) {
     return row?.id.match(/-(\d+)$/)?.[1];
   }
@@ -41,15 +37,9 @@
       const instance = row?.dataset.bundleInstance;
       if (!row || !instance || row.dataset.bundleRole !== 'main') return;
 
-      const scope = row.closest('tbody') || document;
-      const addOnRows = Array.from(scope.querySelectorAll('.cart-item')).filter(
-        (candidate) => candidate !== row && candidate.dataset.bundleInstance === instance,
-      );
-      if (!addOnRows.length) return; // no add-ons to cascade — default remove flow is fine
-
       // Take over the whole removal: the default CartRemoveButton handler
       // only knows how to remove its own line by position, and firing it
-      // concurrently with our add-on removals risks the two racing over
+      // concurrently with our own removals risks the two racing over
       // shifting line positions. Removing every line by its stable key in
       // one batch avoids that.
       event.preventDefault();
@@ -58,10 +48,7 @@
       const cartItems = removeBtn.closest('cart-items') || removeBtn.closest('cart-drawer-items');
       if (!cartItems) return;
 
-      const rows = [row, ...addOnRows];
-      const keys = rows.map(lineKeyOf).filter(Boolean);
       const mainIndex = indexOf(row);
-
       if (mainIndex) cartItems.enableLoading(mainIndex);
 
       // Sections to re-render after the removals. Crucially this includes
@@ -72,28 +59,49 @@
           ? cartItems.getSectionsToRender()
           : [];
 
-      // One at a time, not Promise.all: concurrent /cart/change.js calls
-      // against the same cart session can race each other server-side (one
-      // can 400 because another write landed first). Awaiting each in turn
-      // keeps every removal reliable at the cost of a few hundred ms. Only the
-      // LAST call asks for the rendered sections (the final cart state).
-      keys
-        .reduce(
-          (chain, id, i) =>
-            chain.then(() => {
-              const body = { id, quantity: 0 };
-              if (i === keys.length - 1 && sections.length) {
-                body.sections = sections.map((section) => section.section);
-                body.sections_url = window.location.pathname;
-              }
-              return fetch(window.routes.cart_change_url, {
-                ...fetchConfig(),
-                body: JSON.stringify(body),
-              }).then((response) => response.text());
-            }),
-          Promise.resolve(),
-        )
+      // Ask Shopify for the CURRENT, authoritative cart instead of scanning
+      // rendered .cart-item rows for a "line key" data attribute: a combo
+      // bundle's package can span several DIFFERENT main-product lines (not
+      // just add-ons), and DOM-scraping for each row's key was unreliable —
+      // some lines could silently end up missing from the removal batch.
+      // Reading straight from /cart.js and filtering by the same
+      // _bundle_instance property every line in this purchase shares is
+      // exact, regardless of how many main-product lines it has.
+      fetch('/cart.js', { headers: { Accept: 'application/json' } })
+        .then((response) => response.json())
+        .then((cart) => {
+          const keys = (cart.items || [])
+            .filter(
+              (cartItem) =>
+                cartItem.properties && cartItem.properties['_bundle_instance'] === instance,
+            )
+            .map((cartItem) => cartItem.key);
+          if (!keys.length) return null;
+
+          // One at a time, not Promise.all: concurrent /cart/change.js calls
+          // against the same cart session can race each other server-side
+          // (one can 400 because another write landed first). Awaiting each
+          // in turn keeps every removal reliable at the cost of a few hundred
+          // ms. Only the LAST call asks for the rendered sections (the final
+          // cart state).
+          return keys.reduce(
+            (chain, id, i) =>
+              chain.then(() => {
+                const body = { id, quantity: 0 };
+                if (i === keys.length - 1 && sections.length) {
+                  body.sections = sections.map((section) => section.section);
+                  body.sections_url = window.location.pathname;
+                }
+                return fetch(window.routes.cart_change_url, {
+                  ...fetchConfig(),
+                  body: JSON.stringify(body),
+                }).then((response) => response.text());
+              }),
+            Promise.resolve(),
+          );
+        })
         .then((lastState) => {
+          if (lastState == null) return;
           let parsed = null;
           try {
             parsed = JSON.parse(lastState);
