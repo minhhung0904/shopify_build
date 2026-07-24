@@ -187,22 +187,78 @@
               >
                 {%- comment -%}
                   Build the set of product handles that are the MAIN product of
-                  an active bundle (the first handle in config.productHandles).
+                  an active bundle (the first handle in config.productHandles),
+                  plus a "handle:price_cents|" map for COMBO bundles' standalone
+                  display products (combo's main products live on their own
+                  pages and aren't the card being overridden, so they're kept
+                  out of bundle_main_handles — only the display product is).
                   Cards for these products link to the product page's bundle
-                  picker instead of quick-adding the lone variant. Keep the app
-                  id list in sync with sections/main-product.liquid.
+                  picker instead of quick-adding a lone variant / showing the
+                  display product's own (irrelevant) price. Keep the app id
+                  list in sync with sections/main-product.liquid.
                 {%- endcomment -%}
                 {%- liquid
                   assign bundle_main_handles = ','
+                  assign combo_display_map = '|'
                   assign bundle_app_ids = '395796512769,399662219265' | split: ','
                   for bundle_app_id in bundle_app_ids
                     assign bundle_type = 'app--' | append: bundle_app_id | append: '--bundle'
                     for bundle in shop.metaobjects[bundle_type].values
                       if bundle.status.value == 'active'
                         assign bcfg = bundle.config.value
-                        assign main_handle = bcfg.productHandles | first
-                        if main_handle != blank
-                          assign bundle_main_handles = bundle_main_handles | append: main_handle | append: ','
+                        if bundle.bundle_type.value == 'combo'
+                          assign combo_display_handle = bcfg.displayProduct.handle
+                          if combo_display_handle != blank
+                            assign combo_cheapest_cents = -1
+                            for combo_main_handle in bcfg.productHandles
+                              assign combo_main_product = all_products[combo_main_handle]
+                              if combo_main_product != blank
+                                assign combo_main_variant = combo_main_product.selected_or_first_available_variant | default: combo_main_product.variants.first
+                                if combo_main_variant != blank
+                                  if combo_cheapest_cents == -1
+                                    assign combo_cheapest_cents = combo_main_variant.price
+                                  elsif combo_main_variant.price < combo_cheapest_cents
+                                    assign combo_cheapest_cents = combo_main_variant.price
+                                  endif
+                                endif
+                              endif
+                            endfor
+                            if combo_cheapest_cents >= 0
+                              assign combo_smallest_qty = 0
+                              assign combo_smallest_tier = blank
+                              for combo_tier in bcfg.tiers
+                                if combo_smallest_tier == blank
+                                  assign combo_smallest_qty = combo_tier.quantity
+                                  assign combo_smallest_tier = combo_tier
+                                elsif combo_tier.quantity < combo_smallest_qty
+                                  assign combo_smallest_qty = combo_tier.quantity
+                                  assign combo_smallest_tier = combo_tier
+                                endif
+                              endfor
+                              if combo_smallest_tier != blank
+                                assign combo_tier_cents = combo_cheapest_cents | times: combo_smallest_qty
+                                assign combo_final_cents = combo_tier_cents
+                                if combo_smallest_tier.discountType == 'percentage'
+                                  assign combo_discount_cents = combo_tier_cents | times: combo_smallest_tier.discountValue | divided_by: 100.0 | round
+                                  assign combo_final_cents = combo_tier_cents | minus: combo_discount_cents
+                                elsif combo_smallest_tier.discountType == 'fixed_amount'
+                                  assign combo_discount_cents = combo_smallest_tier.discountValue | times: 100
+                                  assign combo_final_cents = combo_tier_cents | minus: combo_discount_cents
+                                elsif combo_smallest_tier.discountType == 'fixed_price'
+                                  assign combo_final_cents = combo_smallest_tier.discountValue | times: 100
+                                endif
+                                if combo_final_cents < 0
+                                  assign combo_final_cents = 0
+                                endif
+                                assign combo_display_map = combo_display_map | append: combo_display_handle | append: ':' | append: combo_final_cents | append: '|'
+                              endif
+                            endif
+                          endif
+                        else
+                          assign main_handle = bcfg.productHandles | first
+                          if main_handle != blank
+                            assign bundle_main_handles = bundle_main_handles | append: main_handle | append: ','
+                          endif
                         endif
                       endif
                     endfor
@@ -233,7 +289,8 @@
                       quick_add: section.settings.quick_add,
                       section_id: section.id,
                       product_view_context: 'collection',
-                      bundle_main_handles: bundle_main_handles
+                      bundle_main_handles: bundle_main_handles,
+                      combo_display_map: combo_display_map
                     %}
                   </li>
                   {%- assign skip_card_product_styles = true -%}

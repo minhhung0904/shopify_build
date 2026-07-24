@@ -54,6 +54,26 @@
         assign is_bundle_main = true
       endif
     endif
+
+    comment
+      Combo bundles: this card's product IS the bundle's own standalone
+      display product (not a real, individually-priced item), so it gets the
+      same "choose options" treatment as a bundle main product, and its price
+      is overridden to the cheapest available package (smallest tier, cheapest
+      main product/variant) instead of the display product's own price.
+      combo_display_map is a "|handle:price_cents|handle:price_cents|" string
+      built by the collection section from the bundle metaobjects.
+    endcomment
+    assign is_combo_display = false
+    assign combo_min_price_cents = 0
+    if combo_display_map != blank
+      assign combo_needle = '|' | append: card_product.handle | append: ':'
+      if combo_display_map contains combo_needle
+        assign is_combo_display = true
+        assign is_bundle_main = true
+        assign combo_min_price_cents = combo_display_map | split: combo_needle | last | split: '|' | first | plus: 0
+      endif
+    endif
   -%}
 
   <product-component view-event-payload="{{ card_product | standard_event_data: 'view', context: product_view_context | escape }}">
@@ -221,7 +241,11 @@
                 </p>
               {%- endif -%}
 
-              {% render 'price', product: card_product, price_class: '', show_compare_at_price: true, always_show_compare: true %}
+              {%- if is_combo_display -%}
+                {% render 'price', product: card_product, price_class: '', combo_from_price: combo_min_price_cents %}
+              {%- else -%}
+                {% render 'price', product: card_product, price_class: '', show_compare_at_price: true, always_show_compare: true %}
+              {%- endif -%}
               {%- if card_product.quantity_price_breaks_configured? -%}
                 {% if card_product.variants_count == 1 and quick_add == 'bulk' %}
                   {% liquid

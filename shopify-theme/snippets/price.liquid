@@ -11,6 +11,9 @@
   - always_show_compare: {Boolean} When true, renders the struck-through compare-at price layout
     even for products without a real compare_at_price, using the regular price as the struck-through
     value so every card reserves the same two-line layout (optional)
+  - combo_from_price: {Number} Cents. When set, overrides the product's own price with this amount,
+    shown as a "From $X" starting price — used for a combo bundle's standalone display product, whose
+    own price is irrelevant since the real price depends on the package/products the shopper picks (optional)
 
   Usage:
   {% render 'price', product: product %}
@@ -47,6 +50,15 @@
   endif
 
   if target == product and product.price_varies
+    assign money_price = 'products.product.price.from_price_html' | t: price: money_price
+  endif
+
+  if combo_from_price
+    assign show_sale_layout = false
+    assign money_price = combo_from_price | money
+    if settings.currency_code_enabled
+      assign money_price = combo_from_price | money_with_currency
+    endif
     assign money_price = 'products.product.price.from_price_html' | t: price: money_price
   endif
 -%}
