@@ -32,6 +32,19 @@
 {%- if matched -%}
   {%- assign matched_config = matched.config.value -%}
   {%- assign bundle_accent = matched_config.accentColor | default: block.settings.accent_color -%}
+
+  {%- if matched.bundle_type.value == "combo" -%}
+    {%- comment -%}
+      Combo bundles carry their own per-tier pricing inside the picker below —
+      the theme's regular product price block would otherwise show the display
+      product's own (irrelevant) price on the page. Hide it, scoped to this
+      section instance only, so other products on the same template still show
+      their price normally.
+    {%- endcomment -%}
+    {%- style -%}
+      #price-{{ section.id }} { display: none !important; }
+    {%- endstyle -%}
+  {%- endif -%}
   {%- render 'bundle-picker-css',
     scope: block.id,
     bg: block.settings.background_color,
