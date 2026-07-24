@@ -1,12 +1,14 @@
 /**
  * A Tiered bundle's add-ons can be removed from the cart individually, but
  * removing the main product line has to take its add-ons with it — leaving
- * them behind would charge for add-ons whose bundle no longer exists.
+ * them behind would charge for add-ons whose bundle no longer exists. A combo
+ * bundle's package can also span several DIFFERENT main-product lines, all of
+ * which must go together too.
  *
  * Cart lines carry a shared `_bundle_instance` property (set by
- * bundle-picker.js at add-to-cart time) and the main line additionally
- * carries `_bundle_role=main`. Both are mirrored onto each cart-item <tr> as
- * data attributes by main-cart-items.liquid / cart-drawer.liquid.
+ * bundle-picker.js at add-to-cart time) and main lines additionally carry
+ * `_bundle_role=main`. Both are mirrored onto each cart-item <tr> as data
+ * attributes by main-cart-items.liquid / cart-drawer.liquid.
  */
 (function () {
   if (window.__bundleCascadeDeleteInit) return;
@@ -27,64 +29,64 @@
     return el ? el.innerHTML : html;
   }
 
-  document.addEventListener(
-    'click',
-    function (event) {
-      const removeBtn = event.target.closest('cart-remove-button');
-      if (!removeBtn) return;
+  function applyRenderedSections(cartItems, sections, parsed) {
+    if (!parsed || !parsed.sections) {
+      // Fallback: at least refresh the visible item list.
+      if (typeof cartItems.onCartUpdate === 'function') cartItems.onCartUpdate();
+      return;
+    }
 
-      const row = removeBtn.closest('.cart-item');
-      const instance = row?.dataset.bundleInstance;
-      if (!row || !instance || row.dataset.bundleRole !== 'main') return;
+    // Mirror Dawn's updateQuantity: toggle the empty state on the cart
+    // wrappers and swap in every re-rendered section (item list, footer,
+    // header count bubble, live region).
+    const isEmpty = parsed.item_count === 0;
+    [
+      cartItems,
+      document.getElementById('main-cart-footer'),
+      document.querySelector('cart-drawer'),
+    ].forEach((el) => el && el.classList.toggle('is-empty', isEmpty));
 
-      // Take over the whole removal: the default CartRemoveButton handler
-      // only knows how to remove its own line by position, and firing it
-      // concurrently with our own removals risks the two racing over
-      // shifting line positions. Removing every line by its stable key in
-      // one batch avoids that.
-      event.preventDefault();
-      event.stopImmediatePropagation();
+    sections.forEach((section) => {
+      const container = document.getElementById(section.id);
+      if (!container || parsed.sections[section.section] == null) return;
+      const target = container.querySelector(section.selector) || container;
+      target.innerHTML = sectionInnerHTML(parsed.sections[section.section], section.selector);
+    });
+  }
 
-      const cartItems = removeBtn.closest('cart-items') || removeBtn.closest('cart-drawer-items');
-      if (!cartItems) return;
+  // Removes every cart line sharing `instance`, then re-checks the live cart
+  // and retries any stragglers. This verify-and-retry loop (rather than
+  // firing the removal calls once and trusting them) is deliberate: fetch()
+  // only rejects on a network failure, not on a non-2xx response, so a single
+  // /cart/change.js call in the batch can be rejected server-side without
+  // ever surfacing as a caught error — silently leaving that one line behind
+  // while the rest of the batch looks like it succeeded. Re-reading /cart.js
+  // after each pass catches that instead of trusting the fetch resolved.
+  function cascadeRemove(instance, cartItems, attemptsLeft) {
+    attemptsLeft = attemptsLeft == null ? 3 : attemptsLeft;
 
-      const mainIndex = indexOf(row);
-      if (mainIndex) cartItems.enableLoading(mainIndex);
+    return fetch('/cart.js', { headers: { Accept: 'application/json' } })
+      .then((response) => response.json())
+      .then((cart) => {
+        const keys = (cart.items || [])
+          .filter(
+            (item) => item.properties && item.properties['_bundle_instance'] === instance,
+          )
+          .map((item) => item.key);
+        if (!keys.length) return; // fully clean — nothing left to do
 
-      // Sections to re-render after the removals. Crucially this includes
-      // 'cart-icon-bubble', so the header cart-count badge updates immediately
-      // instead of staying stale until a manual page refresh (F5).
-      const sections =
-        typeof cartItems.getSectionsToRender === 'function'
-          ? cartItems.getSectionsToRender()
-          : [];
+        const sections =
+          typeof cartItems.getSectionsToRender === 'function'
+            ? cartItems.getSectionsToRender()
+            : [];
 
-      // Ask Shopify for the CURRENT, authoritative cart instead of scanning
-      // rendered .cart-item rows for a "line key" data attribute: a combo
-      // bundle's package can span several DIFFERENT main-product lines (not
-      // just add-ons), and DOM-scraping for each row's key was unreliable —
-      // some lines could silently end up missing from the removal batch.
-      // Reading straight from /cart.js and filtering by the same
-      // _bundle_instance property every line in this purchase shares is
-      // exact, regardless of how many main-product lines it has.
-      fetch('/cart.js', { headers: { Accept: 'application/json' } })
-        .then((response) => response.json())
-        .then((cart) => {
-          const keys = (cart.items || [])
-            .filter(
-              (cartItem) =>
-                cartItem.properties && cartItem.properties['_bundle_instance'] === instance,
-            )
-            .map((cartItem) => cartItem.key);
-          if (!keys.length) return null;
-
-          // One at a time, not Promise.all: concurrent /cart/change.js calls
-          // against the same cart session can race each other server-side
-          // (one can 400 because another write landed first). Awaiting each
-          // in turn keeps every removal reliable at the cost of a few hundred
-          // ms. Only the LAST call asks for the rendered sections (the final
-          // cart state).
-          return keys.reduce(
+        // One at a time, not Promise.all: concurrent /cart/change.js calls
+        // against the same cart session can race each other server-side (one
+        // can fail because another write landed first). Awaiting each in
+        // turn keeps every removal as reliable as a single request can be —
+        // the outer retry loop is what catches the rest.
+        return keys
+          .reduce(
             (chain, id, i) =>
               chain.then(() => {
                 const body = { id, quantity: 0 };
@@ -98,43 +100,47 @@
                 }).then((response) => response.text());
               }),
             Promise.resolve(),
-          );
-        })
-        .then((lastState) => {
-          if (lastState == null) return;
-          let parsed = null;
-          try {
-            parsed = JSON.parse(lastState);
-          } catch (error) {
-            parsed = null;
-          }
+          )
+          .then((lastState) => {
+            let parsed = null;
+            try {
+              parsed = JSON.parse(lastState);
+            } catch (error) {
+              parsed = null;
+            }
+            applyRenderedSections(cartItems, sections, parsed);
 
-          if (!parsed || !parsed.sections) {
-            // Fallback: at least refresh the visible item list.
-            if (typeof cartItems.onCartUpdate === 'function') cartItems.onCartUpdate();
-            return;
-          }
-
-          // Mirror Dawn's updateQuantity: toggle the empty state on the cart
-          // wrappers and swap in every re-rendered section (item list, footer,
-          // header count bubble, live region).
-          const isEmpty = parsed.item_count === 0;
-          [
-            cartItems,
-            document.getElementById('main-cart-footer'),
-            document.querySelector('cart-drawer'),
-          ].forEach((el) => el && el.classList.toggle('is-empty', isEmpty));
-
-          sections.forEach((section) => {
-            const container = document.getElementById(section.id);
-            if (!container || parsed.sections[section.section] == null) return;
-            const target = container.querySelector(section.selector) || container;
-            target.innerHTML = sectionInnerHTML(
-              parsed.sections[section.section],
-              section.selector,
-            );
+            if (attemptsLeft > 1) {
+              return cascadeRemove(instance, cartItems, attemptsLeft - 1);
+            }
           });
-        })
+      });
+  }
+
+  document.addEventListener(
+    'click',
+    function (event) {
+      const removeBtn = event.target.closest('cart-remove-button');
+      if (!removeBtn) return;
+
+      const row = removeBtn.closest('.cart-item');
+      const instance = row?.dataset.bundleInstance;
+      if (!row || !instance || row.dataset.bundleRole !== 'main') return;
+
+      // Take over the whole removal: the default CartRemoveButton handler
+      // only knows how to remove its own line by position, and firing it
+      // concurrently with our own removals risks the two racing over
+      // shifting line positions.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const cartItems = removeBtn.closest('cart-items') || removeBtn.closest('cart-drawer-items');
+      if (!cartItems) return;
+
+      const mainIndex = indexOf(row);
+      if (mainIndex) cartItems.enableLoading(mainIndex);
+
+      cascadeRemove(instance, cartItems)
         .catch(() => window.location.reload())
         .finally(() => {
           if (mainIndex) cartItems.disableLoading(mainIndex);
