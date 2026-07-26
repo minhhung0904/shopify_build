@@ -1,5 +1,6 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteError } from "react-router";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { ReauthBoundary } from "./reauth-boundary";
 
 export default function App() {
   return (
@@ -24,9 +25,7 @@ export default function App() {
   );
 }
 
-export function ErrorBoundary() {
-  return boundary.error(useRouteError());
-}
+export { ReauthBoundary as ErrorBoundary };
 
 export const headers = (headersArgs) => {
   return boundary.headers(headersArgs);
