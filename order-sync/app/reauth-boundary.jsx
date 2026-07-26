@@ -5,39 +5,39 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 // boundary.error() renders Shopify's App Bridge re-auth/bounce response via
 // dangerouslySetInnerHTML, which never executes the <script> it injects —
 // browsers never run <script> tags inserted that way. That's invisible on a
-// full document load (the browser's own HTML parser executes it), but when
-// authenticate.admin() bounces during a client-side transition (e.g. an
-// expired session token), React Router delivers it as a route error instead,
-// and the script silently never runs, leaving the app stuck on a blank page.
+// full document load (the browser's own HTML parser executes it as the very
+// first script, which App Bridge requires), but when authenticate.admin()
+// bounces during a client-side transition (e.g. an expired session token),
+// React Router delivers it as a route error instead, and the script never
+// runs. Re-creating it via the DOM API doesn't work either — App Bridge
+// explicitly refuses to run unless it's the first <script> tag in the
+// document, which is impossible to satisfy once React has already booted.
 //
-// Re-creating the <script> tag(s) via the DOM API (not innerHTML) makes the
-// browser actually execute them, so App Bridge runs and performs its own
-// (token-aware) redirect. Do NOT reload the page here: window.location still
-// carries whatever (possibly already-expired/one-time-use) token was in the
-// failed request, so reloading just replays the same failure forever.
+// So force a real navigation instead, dropping any one-time-use params
+// (id_token) from the current URL first. Reloading the exact same URL would
+// just replay the same already-consumed token and loop forever; navigating
+// to the shop/host/embedded-only URL gets a fresh, real document response
+// that the server already handles correctly.
 export function ReauthBoundary() {
   const error = useRouteError();
   const isReauthBounce =
     isRouteErrorResponse(error) &&
     typeof error.data === "string" &&
     error.data.includes("shopifycloud/app-bridge.js");
-  const injected = useRef(false);
+  const navigated = useRef(false);
 
   useEffect(() => {
-    if (!isReauthBounce || injected.current) return;
-    injected.current = true;
+    if (!isReauthBounce || navigated.current) return;
+    navigated.current = true;
 
-    const container = document.createElement("div");
-    container.innerHTML = error.data;
-    container.querySelectorAll("script").forEach((oldScript) => {
-      const script = document.createElement("script");
-      for (const attr of oldScript.attributes) {
-        script.setAttribute(attr.name, attr.value);
-      }
-      script.textContent = oldScript.textContent;
-      document.body.appendChild(script);
-    });
-  }, [isReauthBounce, error]);
+    const current = new URL(window.location.href);
+    const clean = new URL(window.location.pathname, window.location.origin);
+    for (const key of ["shop", "host", "embedded"]) {
+      const value = current.searchParams.get(key);
+      if (value) clean.searchParams.set(key, value);
+    }
+    window.location.replace(clean.toString());
+  }, [isReauthBounce]);
 
   if (isReauthBounce) return null;
   return boundary.error(error);
