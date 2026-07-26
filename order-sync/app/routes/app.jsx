@@ -12,9 +12,15 @@ export const loader = async ({ request }) => {
 
 export default function App() {
   const { apiKey } = useLoaderData();
+  if (typeof window !== "undefined") {
+    console.log("[order-sync debug] app.jsx rendering", { apiKey, embedded: true });
+  }
 
   return (
     <AppProvider embedded apiKey={apiKey}>
+      <p style={{ background: "yellow", color: "black", padding: 8 }}>
+        [order-sync debug] app.jsx rendered
+      </p>
       <Outlet />
     </AppProvider>
   );

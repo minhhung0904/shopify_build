@@ -44,9 +44,16 @@ export default function Index() {
   const { connection, shop } = useLoaderData();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
+  if (typeof window !== "undefined") {
+    console.log("[order-sync debug] app._index.jsx rendering", { connection, shop });
+  }
 
   return (
-    <s-page heading="OrderSync">
+    <>
+      <p style={{ background: "lime", color: "black", padding: 8 }}>
+        [order-sync debug] app._index.jsx rendered
+      </p>
+      <s-page heading="OrderSync">
       <s-section heading="Platform connection">
         {connection.connected ? (
           <>
@@ -79,6 +86,7 @@ export default function Index() {
           </>
         )}
       </s-section>
-    </s-page>
+      </s-page>
+    </>
   );
 }
