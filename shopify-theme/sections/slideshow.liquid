@@ -55,22 +55,16 @@
       min-width: 0;
     }
 
-    /* Very light dark wash over the image so the button stands out. Sits above
-       the image but below .banner__content (z-index 2). */
+    /* Containing block for .banner__content (see the absolute positioning
+       above) — without this the overlay stretches past the image down to the
+       slider controls and the button sits too low. */
     #Slider-{{ section.id }} .slideshow__slide {
       position: relative;
     }
-    #Slider-{{ section.id }} .slideshow__slide::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.16);
-      pointer-events: none;
-      z-index: 1;
-    }
 
-    /* SHOP NOW button: gold gradient pill with a bright gold rim and a poke ball
-       on the right, still translucent so the frosted blur shows through. */
+    /* SHOP NOW button: gold gradient matching the site's brand gold (#E8B600),
+       softer corners (not a full pill), with a poke ball on the right, still
+       translucent so the frosted blur shows through. */
     #Slider-{{ section.id }} .banner__buttons .button {
       /* Bangers (the anime/comic face), upright. */
       font-family: 'Bangers', 'Comic Sans MS', var(--font-heading-family), sans-serif;
@@ -93,17 +87,17 @@
       padding-top: 0.1em;
       padding-bottom: 0;
       border-radius: 999px;
-      color: #241505;
+      color: #1a1a1a;
       background-image: linear-gradient(
         180deg,
-        rgba(255, 236, 165, 0.55) 0%,
-        rgba(247, 206, 95, 0.5) 45%,
-        rgba(206, 152, 40, 0.55) 100%
+        rgba(255, 219, 77, 0.55) 0%,
+        rgba(232, 182, 0, 0.5) 45%,
+        rgba(166, 124, 0, 0.55) 100%
       );
-      background-color: rgba(250, 196, 36, 0.2);
+      background-color: rgba(232, 182, 0, 0.2);
       backdrop-filter: blur(4px) saturate(130%);
       -webkit-backdrop-filter: blur(4px) saturate(130%);
-      border: 3px solid rgba(255, 231, 150, 0.85);
+      border: 3px solid rgba(255, 219, 77, 0.85);
       box-shadow:
         inset 0 0.2rem 0.6rem rgba(255, 255, 255, 0.55),
         inset 0 -0.3rem 0.8rem rgba(120, 75, 0, 0.25),
@@ -167,7 +161,7 @@
         padding-right: 13.1rem;
         padding-top: 0.1em;
         padding-bottom: 0;
-        background-color: rgba(250, 196, 36, 0.14);
+        background-color: rgba(232, 182, 0, 0.14);
         backdrop-filter: blur(12px) saturate(130%);
         -webkit-backdrop-filter: blur(12px) saturate(130%);
       }
