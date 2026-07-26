@@ -17,3 +17,14 @@ bundle-app/extensions/*/dist
 bundle-app/.shopify/*
 bundle-app/.shopify.lock
 bundle-app/.react-router/
+
+# order-sync (Shopify app) build artifacts / dependencies
+order-sync/node_modules
+order-sync/.cache
+order-sync/build
+order-sync/.env
+order-sync/.env.*
+!order-sync/.env.example
+order-sync/.shopify/*
+order-sync/.shopify.lock
+order-sync/.react-router/
