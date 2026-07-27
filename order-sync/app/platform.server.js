@@ -61,12 +61,16 @@ export function mapOrder(order, shop) {
 }
 
 async function post(path, token, body, { idempotencyKey } = {}) {
-  const url = platformUrl();
-  if (!url) throw new PlatformError("PLATFORM_API_URL is not set");
+  const base = platformUrl();
+  if (!base) throw new PlatformError("PLATFORM_API_URL is not set");
+
+  // Note: a path starting with "/" discards any path on PLATFORM_API_URL, so
+  // a base like https://host/api + "/orders" resolves to https://host/orders.
+  const url = new URL(path, base);
 
   let response;
   try {
-    response = await fetch(new URL(path, url), {
+    response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -78,11 +82,18 @@ async function post(path, token, body, { idempotencyKey } = {}) {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
+    console.error(`POST ${url} failed: ${error.message}`);
     throw new PlatformError(`Request to platform failed: ${error.message}`);
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
+    // The response body is where the platform explains itself; without it a
+    // 500 is unactionable. Server log only — merchants shouldn't see stack
+    // traces from the platform in the app UI.
+    console.error(
+      `POST ${url} returned ${response.status}: ${text.slice(0, 500)}`,
+    );
     throw new PlatformError(`Platform returned ${response.status}`, {
       status: response.status,
       body: text.slice(0, 500),
