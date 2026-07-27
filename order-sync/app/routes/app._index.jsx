@@ -1,7 +1,13 @@
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { authenticate } from "../shopify.server";
-import { verifyToken, PlatformError } from "../platform.server";
-import { deleteToken, getConnection, saveToken } from "../credentials.server";
+import { checkStore, verifyToken, PlatformError } from "../platform.server";
+import {
+  deleteToken,
+  getConnection,
+  getToken,
+  saveStoreName,
+  saveToken,
+} from "../credentials.server";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -15,12 +21,62 @@ export const loader = async ({ request }) => {
 export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const formData = await request.formData();
+  const intent = formData.get("intent");
 
-  if (formData.get("intent") === "disconnect") {
+  if (intent === "disconnect") {
     await deleteToken(session.shop);
     return { ok: true, message: "Disconnected." };
   }
 
+  // Store name is a two-step flow with a single button:
+  //   1. "check-store" verifies the name against Sellfern. On success the UI
+  //      swaps the button to Save.
+  //   2. "save-store" persists the name — but re-verifies first, so an edited
+  //      (still-unverified) name can't slip through; a miss drops back to step 1.
+  // Both steps need a token to authenticate the check.
+  if (intent === "check-store" || intent === "save-store") {
+    const storeName = String(formData.get("storeName") || "").trim();
+    const token = await getToken(session.shop);
+
+    if (!token) {
+      return { ok: false, intent: "check-store", storeName, message: "Connect a token first." };
+    }
+    if (!storeName) {
+      // Empty name clears the mapping: orders fall back to shop-domain mapping.
+      await saveStoreName(session.shop, "");
+      return { ok: true, intent: "check-store", storeName: "", storeExists: null, message: "Store name cleared. Orders map by shop domain." };
+    }
+
+    let storeExists = null;
+    try {
+      const result = await checkStore(token, storeName);
+      storeExists = result.exists;
+    } catch (error) {
+      if (error instanceof PlatformError) {
+        return { ok: false, intent: "check-store", storeName, message: `Could not check store: ${error.message}` };
+      }
+      throw error;
+    }
+
+    // Save step, and the store verifies (or can't be verified) — persist it.
+    if (intent === "save-store" && storeExists !== false) {
+      await saveStoreName(session.shop, storeName);
+      const message = storeExists === true
+        ? `Saved. Orders will sync to store "${storeName}".`
+        : `Saved store name "${storeName}". (Could not verify it against Sellfern.)`;
+      return { ok: true, intent: "save-store", storeName, storeExists, message };
+    }
+
+    // Check step, or a save blocked because the store doesn't exist.
+    const message = storeExists === true
+      ? `Store "${storeName}" exists in Sellfern. Click Save to use it.`
+      : storeExists === false
+        ? `"${storeName}" does not exist in Sellfern yet — create it under Settings → Stores first.`
+        : `Store "${storeName}" could not be verified against Sellfern. Click Save to use it anyway.`;
+    return { ok: true, intent: "check-store", storeName, storeExists, message };
+  }
+
+  // Default: connect a token.
   const token = String(formData.get("token") || "").trim();
   if (!token) {
     return { ok: false, message: "Paste a token first." };
@@ -51,12 +107,27 @@ export default function Index() {
   // attribute when it should actually apply. (React 19 handles this itself.)
   const disabledWhenBusy = busy ? { disabled: true } : {};
 
+  const storeIntent =
+    result?.intent === "check-store" || result?.intent === "save-store"
+      ? result
+      : null;
+
+  // Advance to the Save step once a non-empty name has verified (or the platform
+  // can't verify it). A failed check keeps the button on "Check".
+  const canSave = Boolean(
+    storeIntent?.ok && storeIntent.storeName && storeIntent.storeExists !== false,
+  );
+
+  // Show the value that was just checked, falling back to the saved one.
+  const storeFieldValue = storeIntent?.storeName ?? connection.storeName ?? "";
+
   return (
     <s-page heading="OrderSync">
       <s-section heading="Platform connection">
         {/* Without this, a rejected token fails silently and looks like the
-            form simply didn't do anything. */}
-        {result?.message ? (
+            form simply didn't do anything. Store-name results carry an `intent`
+            and get their own banner in the Sellfern store section below. */}
+        {result?.message && !storeIntent ? (
           <s-banner tone={result.ok ? "success" : "critical"}>
             {result.message}
           </s-banner>
@@ -92,6 +163,59 @@ export default function Index() {
           </>
         )}
       </s-section>
+
+      {connection.connected && (
+        <s-section heading="Sellfern store">
+          <s-paragraph>
+            Type the store name exactly as it appears in Sellfern under Settings
+            → Stores. Synced orders are filed under this name. Leave it empty to
+            let the platform map orders by shop domain instead.
+          </s-paragraph>
+
+          {storeIntent && (
+            <s-banner
+              tone={
+                storeIntent.ok
+                  ? storeIntent.storeExists === false
+                    ? "warning"
+                    : storeIntent.storeExists === true
+                      ? "success"
+                      : "info"
+                  : "critical"
+              }
+            >
+              {storeIntent.message}
+            </s-banner>
+          )}
+
+          <Form method="post" key={storeFieldValue}>
+            <input
+              type="hidden"
+              name="intent"
+              value={canSave ? "save-store" : "check-store"}
+            />
+            <s-text-field
+              name="storeName"
+              label="Store name"
+              defaultValue={storeFieldValue}
+              details={
+                connection.storeName
+                  ? `Currently syncing to "${connection.storeName}".`
+                  : "No store name set yet."
+              }
+            />
+            <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+              {busy
+                ? canSave
+                  ? "Saving…"
+                  : "Checking…"
+                : canSave
+                  ? "Save store"
+                  : "Check store"}
+            </s-button>
+          </Form>
+        </s-section>
+      )}
     </s-page>
   );
 }
