@@ -45,6 +45,11 @@ export default function Index() {
   const result = useActionData();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
+  // React 18 stringifies props on custom elements, so disabled={false} renders
+  // as disabled="false" — and to a web component any present attribute counts
+  // as true, which leaves the button permanently unclickable. Only pass the
+  // attribute when it should actually apply. (React 19 handles this itself.)
+  const disabledWhenBusy = busy ? { disabled: true } : {};
 
   return (
     <s-page heading="OrderSync">
@@ -64,7 +69,7 @@ export default function Index() {
             </s-banner>
             <Form method="post">
               <input type="hidden" name="intent" value="disconnect" />
-              <s-button type="submit" tone="critical" disabled={busy}>
+              <s-button type="submit" tone="critical" {...disabledWhenBusy}>
                 Disconnect
               </s-button>
             </Form>
@@ -80,7 +85,7 @@ export default function Index() {
                 label="Integration token"
                 details="Generate one on the platform, then paste it here."
               />
-              <s-button type="submit" variant="primary" disabled={busy}>
+              <s-button type="submit" variant="primary" {...disabledWhenBusy}>
                 {busy ? "Connecting…" : "Connect"}
               </s-button>
             </Form>
