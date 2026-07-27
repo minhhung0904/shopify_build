@@ -62,6 +62,25 @@ Header: X-API-Key: <token>
 
 Nếu nền tảng chưa có endpoint này thì bỏ trống, app sẽ chấp nhận token luôn.
 
+### (Tuỳ chọn) Endpoint kiểm tra tên store
+
+Merchant nhập **tên store** ở trang settings của app (khớp với store cấu hình
+bên nền tảng). App có nút **Check & save store** gọi endpoint này để báo sớm nếu
+tên chưa tồn tại — thay vì để đơn rơi vào "store mismatch" âm thầm.
+
+```
+POST <PLATFORM_CHECK_STORE_PATH>
+Header: X-API-Key: <token>
+Body:   { "store_name": "My Etsy Store" }
+```
+
+- Trả **2xx** với body `{ "exists": true|false }` (app đọc `data.exists` hoặc
+  `exists`). `true` nếu tên khớp một store (hoặc alias) trong org của merchant.
+- Token sai → **4xx**.
+
+Nếu nền tảng chưa có endpoint này thì bỏ trống `PLATFORM_CHECK_STORE_PATH`; app
+vẫn cho lưu tên store nhưng không kiểm tra được.
+
 ---
 
 ## 3. Endpoint nhận đơn — phần chính cần build
@@ -89,6 +108,7 @@ X-Idempotency-Key: <shop-domain>:<order-id>
 {
   "source": "shopify",
   "shop_domain": "vcn-store.myshopify.com",
+  "store_name": "My Etsy Store",
   "order_id": "5678901234567",
   "order_number": "#1001",
   "created_at": "2026-07-15T10:30:00-04:00",
@@ -138,6 +158,7 @@ X-Idempotency-Key: <shop-domain>:<order-id>
 |---|---|---|
 | `source` | string | Luôn là `"shopify"`. |
 | `shop_domain` | string | Domain `.myshopify.com` của store. Xác định store gửi đơn. |
+| `store_name` | string \| null | Tên store do merchant nhập ở trang settings của app, khớp với store cấu hình bên nền tảng. Nếu có, nền tảng **nên lưu đơn theo tên này** thay vì map theo `shop_domain`. `null` nếu merchant chưa nhập. |
 | `order_id` | string | ID đơn của Shopify. Duy nhất trong 1 store. |
 | `order_number` | string | Số đơn hiển thị cho khách, ví dụ `#1001`. |
 | `created_at` | string | ISO 8601, có timezone. |
