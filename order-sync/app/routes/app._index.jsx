@@ -1,4 +1,4 @@
-import { Form, useLoaderData, useNavigation } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { authenticate } from "../shopify.server";
 import { verifyToken, PlatformError } from "../platform.server";
 import { deleteToken, getConnection, saveToken } from "../credentials.server";
@@ -42,12 +42,20 @@ export const action = async ({ request }) => {
 
 export default function Index() {
   const { connection, shop } = useLoaderData();
+  const result = useActionData();
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
 
   return (
     <s-page heading="OrderSync">
       <s-section heading="Platform connection">
+        {/* Without this, a rejected token fails silently and looks like the
+            form simply didn't do anything. */}
+        {result?.message ? (
+          <s-banner tone={result.ok ? "success" : "critical"}>
+            {result.message}
+          </s-banner>
+        ) : null}
         {connection.connected ? (
           <>
             <s-banner tone="success">
