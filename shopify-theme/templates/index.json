@@ -6,7 +6,7 @@
         "slide_1": {
           "type": "slide",
           "settings": {
-            "asset_image": "hero-pokemon.webp",
+            "asset_image": "hero-pokemon.png",
             "image_overlay_opacity": 10,
             "heading": "",
             "heading_size": "hxl",
