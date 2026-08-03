@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "27fcc3ea1ba84619084725dee95a9945"
-application_url = "https://smart-bundle.onrender.com"
+application_url = "https://smart-bundle-1h10.onrender.com"
 embedded = true
 name = "Smart Bundle"
 
@@ -110,7 +110,7 @@ api_version = "2026-10"
   shop_deletion_url = "/webhooks/shop/redact"
 
 [auth]
-redirect_urls = [ "https://smart-bundle.onrender.com/auth/callback" ]
+redirect_urls = [ "https://smart-bundle-1h10.onrender.com/auth/callback" ]
 
 [build]
 automatically_update_urls_on_dev = true
