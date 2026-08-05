@@ -5,7 +5,7 @@
  * merchant authenticates with their own long-lived integration token, which
  * they paste on the settings page. So: URL from env, token from the database.
  */
-import { getToken } from "./credentials.server";
+import { getStoreName, getToken } from "./credentials.server";
 
 const TIMEOUT_MS = Number(process.env.PLATFORM_TIMEOUT_MS || 3000);
 
@@ -28,10 +28,13 @@ export class PlatformError extends Error {
  * TODO: replace with the real schema. The shape below is a neutral flattening,
  * not a contract the platform actually agreed to.
  */
-export function mapOrder(order, shop) {
+export function mapOrder(order, shop, storeName = null) {
   return {
     source: "shopify",
     shop_domain: shop,
+    // Sellfern store to file this order under. When null the platform falls
+    // back to mapping by shop_domain.
+    store_name: storeName || null,
     order_id: String(order.id),
     order_number: order.name ?? String(order.order_number ?? ""),
     created_at: order.created_at,
@@ -118,6 +121,26 @@ export async function verifyToken(token) {
   return { verified: true };
 }
 
+/**
+ * Asks the platform whether `storeName` matches a store the merchant configured
+ * in Sellfern (Settings → Stores), so we can warn before syncing orders under a
+ * name the platform doesn't know.
+ *
+ * Returns { exists }. Throws PlatformError on a bad token or transport error.
+ * If PLATFORM_CHECK_STORE_PATH is unset the platform can't be asked, so we
+ * report unknown (exists: null) rather than a false negative.
+ */
+export async function checkStore(token, storeName) {
+  const path = process.env.PLATFORM_CHECK_STORE_PATH;
+  if (!path) return { exists: null, checked: false };
+
+  const response = await post(path, token, { store_name: storeName });
+  const json = await response.json().catch(() => ({}));
+  // sendSuccess wraps the payload as { success, data: { exists } }.
+  const exists = json?.data?.exists ?? json?.exists ?? null;
+  return { exists: exists == null ? null : Boolean(exists), checked: true };
+}
+
 /** POST one order. Throws PlatformError on timeout or non-2xx. */
 export async function sendOrderToPlatform(order, shop) {
   const token = await getToken(shop);
@@ -127,7 +150,9 @@ export async function sendOrderToPlatform(order, shop) {
     });
   }
 
-  return post(process.env.PLATFORM_ORDERS_PATH || "/orders", token, mapOrder(order, shop), {
+  const storeName = await getStoreName(shop);
+
+  return post(process.env.PLATFORM_ORDERS_PATH || "/orders", token, mapOrder(order, shop, storeName), {
     // Lets the platform drop duplicates on its side too. Shopify can and does
     // deliver the same webhook more than once.
     idempotencyKey: `${shop}:${order.id}`,

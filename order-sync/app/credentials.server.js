@@ -36,13 +36,37 @@ export async function getToken(shop) {
 export async function getConnection(shop) {
   const collection = await getCollection();
   const record = await collection.findOne({ shop });
-  if (!record) return { connected: false };
+  if (!record) return { connected: false, storeName: null };
 
   return {
     connected: true,
     hint: record.hint ?? null,
     connectedAt: record.connectedAt ?? null,
+    // The Sellfern store name orders are filed under; null until the merchant sets it.
+    storeName: record.storeName ?? null,
   };
+}
+
+/**
+ * The Sellfern store name to file this shop's orders under, or null when the
+ * merchant hasn't set one. When null, the platform maps by shop domain instead.
+ */
+export async function getStoreName(shop) {
+  const collection = await getCollection();
+  const record = await collection.findOne({ shop });
+  const name = record?.storeName;
+  return name ? String(name) : null;
+}
+
+/** Persist (or clear) the Sellfern store name the merchant typed for this shop. */
+export async function saveStoreName(shop, storeName) {
+  const collection = await getCollection();
+  const trimmed = String(storeName || "").trim();
+  await collection.updateOne(
+    { shop },
+    { $set: { storeName: trimmed || null } },
+    { upsert: true },
+  );
 }
 
 export async function saveToken(shop, token) {
