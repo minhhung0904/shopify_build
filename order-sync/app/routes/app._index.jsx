@@ -92,6 +92,11 @@ export default function Index() {
           </>
         )}
       </s-section>
+      <s-section heading="Privacy">
+        <a href="/privacy" target="_blank" rel="noreferrer">
+          View our privacy policy
+        </a>
+      </s-section>
     </s-page>
   );
 }
