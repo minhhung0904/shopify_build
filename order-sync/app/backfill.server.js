@@ -6,6 +6,7 @@
  */
 import { markSynced, wasSynced } from "./dedupe.server";
 import { sendOrderToPlatform } from "./platform.server";
+import { FINANCIAL_STATUSES } from "./financial-statuses";
 
 const PAGE_SIZE = 100;
 // Caps one click to a request Render won't time out on. Already-synced orders
@@ -131,18 +132,6 @@ function toWebhookShapedOrder(node) {
     })),
   };
 }
-
-// Values Shopify's order search accepts for `financial_status:`.
-export const FINANCIAL_STATUSES = [
-  "pending",
-  "authorized",
-  "partially_paid",
-  "paid",
-  "partially_refunded",
-  "refunded",
-  "voided",
-  "expired",
-];
 
 /** Builds the `query:` string shared by the count, list, and sync queries. */
 function buildSearchQuery({ from, to, financialStatuses = [] }) {

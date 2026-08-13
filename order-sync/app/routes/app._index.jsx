@@ -1,7 +1,8 @@
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { authenticate } from "../shopify.server";
 import { checkStore, verifyToken, PlatformError } from "../platform.server";
-import { FINANCIAL_STATUSES, previewOrderRange, syncOrderRange } from "../backfill.server";
+import { previewOrderRange, syncOrderRange } from "../backfill.server";
+import { FINANCIAL_STATUSES } from "../financial-statuses";
 import {
   deleteToken,
   getConnection,
