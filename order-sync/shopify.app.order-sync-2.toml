@@ -6,7 +6,7 @@ application_url = "https://sellfernsyncapp.onrender.com"
 embedded = true
 
 [access_scopes]
-scopes = "read_orders"
+scopes = "read_orders,read_all_orders"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 

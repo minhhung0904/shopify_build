@@ -1,6 +1,7 @@
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { authenticate } from "../shopify.server";
 import { checkStore, verifyToken, PlatformError } from "../platform.server";
+import { FINANCIAL_STATUSES, previewOrderRange, syncOrderRange } from "../backfill.server";
 import {
   deleteToken,
   getConnection,
@@ -20,9 +21,43 @@ export const loader = async ({ request }) => {
 };
 
 export const action = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
+
+  if (intent === "preview-range" || intent === "sync-range") {
+    const dateFrom = String(formData.get("dateFrom") || "").trim();
+    const dateTo = String(formData.get("dateTo") || "").trim();
+
+    if (!dateFrom || !dateTo) {
+      return { ok: false, intent, message: "Pick both a start and end date." };
+    }
+    if (dateFrom > dateTo) {
+      return { ok: false, intent, message: "Start date must be before end date." };
+    }
+
+    const financialStatuses = formData.getAll("financialStatus").map(String);
+
+    if (intent === "preview-range") {
+      const preview = await previewOrderRange(admin, {
+        from: dateFrom,
+        to: dateTo,
+        financialStatuses,
+      });
+      return { ok: true, intent, dateFrom, dateTo, financialStatuses, preview };
+    }
+
+    const { scanned, synced, skipped, failed, truncated } = await syncOrderRange(
+      admin,
+      session.shop,
+      { from: dateFrom, to: dateTo, financialStatuses },
+    );
+    const summary = `Scanned ${scanned}: synced ${synced}, skipped ${skipped} already-synced, ${failed} failed.`;
+    const message = truncated
+      ? `${summary} More orders remain in range — click Sync again to continue.`
+      : `${summary} Done.`;
+    return { ok: failed === 0, intent, message };
+  }
 
   if (intent === "disconnect") {
     await deleteToken(session.shop);
@@ -132,6 +167,9 @@ export default function Index() {
     "cancel-store-edit",
   ];
   const storeResult = result && STORE_INTENTS.includes(result.intent) ? result : null;
+  const backfillResult =
+    result?.intent === "preview-range" || result?.intent === "sync-range" ? result : null;
+  const previewResult = result?.intent === "preview-range" && result.ok ? result : null;
 
   // The two-step check/save flow only ever reports via these intents.
   const storeIntent =
@@ -169,7 +207,7 @@ export default function Index() {
         {/* Without this, a rejected token fails silently and looks like the
             form simply didn't do anything. Store-name results carry an `intent`
             and get their own banner in the Sellfern store section below. */}
-        {result?.message && !storeResult ? (
+        {result?.message && !storeResult && !backfillResult ? (
           <s-banner tone={result.ok ? "success" : "critical"}>
             {result.message}
           </s-banner>
@@ -276,6 +314,119 @@ export default function Index() {
                   </s-button>
                 </Form>
               </s-stack>
+            </>
+          )}
+        </s-section>
+      )}
+
+      {connection.connected && (
+        <s-section heading="Backfill orders">
+          <s-paragraph>
+            Resend orders Shopify already delivered in a date range — useful
+            after connecting, or to recover a range that failed earlier.
+            Ranges older than 60 days need the read_all_orders scope; without
+            it Shopify silently omits those orders.
+          </s-paragraph>
+          {backfillResult?.message && (
+            <s-banner tone={backfillResult.ok ? "success" : "critical"}>
+              {backfillResult.message}
+            </s-banner>
+          )}
+          <Form method="post">
+            <input type="hidden" name="intent" value="preview-range" />
+            <s-date-field
+              label="From"
+              name="dateFrom"
+              defaultValue={previewResult?.dateFrom}
+              required
+            ></s-date-field>
+            <s-date-field
+              label="To"
+              name="dateTo"
+              defaultValue={previewResult?.dateTo}
+              required
+            ></s-date-field>
+            <s-choice-list
+              label="Payment status"
+              name="financialStatus"
+              multiple
+              details="Leave all unchecked to preview every payment status."
+            >
+              {FINANCIAL_STATUSES.map((status) => (
+                <s-choice
+                  key={status}
+                  value={status}
+                  selected={previewResult?.financialStatuses.includes(status)}
+                >
+                  {status.replaceAll("_", " ")}
+                </s-choice>
+              ))}
+            </s-choice-list>
+            <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+              {busy ? "Loading…" : "Preview"}
+            </s-button>
+          </Form>
+
+          {previewResult && (
+            <>
+              <s-paragraph>
+                {previewResult.preview.total} order(s) match this filter
+                {previewResult.preview.totalPrecision === "AT_LEAST" ? " (at least)" : ""}.
+              </s-paragraph>
+
+              {previewResult.preview.breakdown.length > 0 && (
+                <s-unordered-list>
+                  {previewResult.preview.breakdown.map((row) => (
+                    <s-list-item key={row.status}>
+                      {row.status.replaceAll("_", " ")}: {row.count}
+                    </s-list-item>
+                  ))}
+                </s-unordered-list>
+              )}
+
+              {previewResult.preview.orders.length > 0 && (
+                <s-table variant="auto">
+                  <s-table-header-row>
+                    <s-table-header listSlot="primary">Order</s-table-header>
+                    <s-table-header listSlot="labeled">Date</s-table-header>
+                    <s-table-header listSlot="labeled">Status</s-table-header>
+                    <s-table-header listSlot="labeled">Total</s-table-header>
+                  </s-table-header-row>
+                  <s-table-body>
+                    {previewResult.preview.orders.map((order) => (
+                      <s-table-row key={order.id}>
+                        <s-table-cell>{order.name}</s-table-cell>
+                        <s-table-cell>{order.createdAt}</s-table-cell>
+                        <s-table-cell>{order.status}</s-table-cell>
+                        <s-table-cell>
+                          {order.total} {order.currency}
+                        </s-table-cell>
+                      </s-table-row>
+                    ))}
+                  </s-table-body>
+                </s-table>
+              )}
+
+              {previewResult.preview.truncated && (
+                <s-paragraph color="subdued">
+                  Showing the first {previewResult.preview.orders.length} orders only —
+                  narrow the date range to see the rest.
+                </s-paragraph>
+              )}
+
+              {previewResult.preview.total > 0 && (
+                <Form method="post">
+                  <input type="hidden" name="intent" value="sync-range" />
+                  <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
+                  <input type="hidden" name="dateTo" value={previewResult.dateTo} />
+                  {previewResult.financialStatuses.map((status) => (
+                    <input key={status} type="hidden" name="financialStatus" value={status} />
+                  ))}
+                  <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+                    {busy ? "Syncing…" : `Sync ${previewResult.preview.total} order(s)`}
+                  </s-button>
+                </Form>
+              )}
             </>
           )}
         </s-section>
