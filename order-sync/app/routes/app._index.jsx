@@ -40,15 +40,7 @@ export const action = async ({ request }) => {
     const orderView = String(formData.get("orderView") || "all");
 
     if (intent === "preview-range") {
-      const cursor = formData.get("cursor") ? String(formData.get("cursor")) : null;
-      const direction = formData.get("direction") === "prev" ? "prev" : "next";
-      const preview = await previewOrderRange(admin, {
-        from: dateFrom,
-        to: dateTo,
-        orderView,
-        cursor,
-        direction,
-      });
+      const preview = await previewOrderRange(admin, { from: dateFrom, to: dateTo, orderView });
       return { ok: true, intent, dateFrom, dateTo, orderView, preview };
     }
 
@@ -408,42 +400,12 @@ export default function Index() {
                 </s-table>
               )}
 
-              <s-stack direction="inline" gap="base">
-                {previewResult.preview.pageInfo.hasPreviousPage && (
-                  <Form method="post">
-                    <input type="hidden" name="intent" value="preview-range" />
-                    <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
-                    <input type="hidden" name="dateTo" value={previewResult.dateTo} />
-                    <input type="hidden" name="orderView" value={previewResult.orderView} />
-                    <input
-                      type="hidden"
-                      name="cursor"
-                      value={previewResult.preview.pageInfo.startCursor ?? ""}
-                    />
-                    <input type="hidden" name="direction" value="prev" />
-                    <s-button type="submit" {...disabledWhenBusy}>
-                      {busy ? "Loading…" : "Previous page"}
-                    </s-button>
-                  </Form>
-                )}
-                {previewResult.preview.pageInfo.hasNextPage && (
-                  <Form method="post">
-                    <input type="hidden" name="intent" value="preview-range" />
-                    <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
-                    <input type="hidden" name="dateTo" value={previewResult.dateTo} />
-                    <input type="hidden" name="orderView" value={previewResult.orderView} />
-                    <input
-                      type="hidden"
-                      name="cursor"
-                      value={previewResult.preview.pageInfo.endCursor ?? ""}
-                    />
-                    <input type="hidden" name="direction" value="next" />
-                    <s-button type="submit" {...disabledWhenBusy}>
-                      {busy ? "Loading…" : "Next page"}
-                    </s-button>
-                  </Form>
-                )}
-              </s-stack>
+              {previewResult.preview.truncated && (
+                <s-paragraph color="subdued">
+                  Showing the first {previewResult.preview.orders.length} orders only —
+                  narrow the date range to see the rest.
+                </s-paragraph>
+              )}
 
               {previewResult.preview.total > 0 && (
                 <Form method="post">

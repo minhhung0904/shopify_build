@@ -158,31 +158,15 @@ async function countOrders(admin, searchQuery) {
   return data.ordersCount;
 }
 
-// Orders per preview page. Small on purpose — this is paged, unlike the
-// sync loop, so each click stays fast.
-const PREVIEW_PAGE_SIZE = 20;
+// How many orders the preview table shows — kept well under MAX_ORDERS since
+// it's just for a merchant to eyeball before confirming.
+const PREVIEW_LIMIT = 50;
 
 const PREVIEW_LIST_QUERY = `#graphql
-  query PreviewOrders(
-    $searchQuery: String!
-    $first: Int
-    $after: String
-    $last: Int
-    $before: String
-  ) {
-    orders(
-      query: $searchQuery
-      first: $first
-      after: $after
-      last: $last
-      before: $before
-      sortKey: CREATED_AT
-    ) {
+  query PreviewOrders($searchQuery: String!) {
+    orders(first: ${PREVIEW_LIMIT}, query: $searchQuery, sortKey: CREATED_AT) {
       pageInfo {
         hasNextPage
-        hasPreviousPage
-        startCursor
-        endCursor
       }
       nodes {
         legacyResourceId
@@ -222,24 +206,13 @@ function summarizeLineItems(lineItems) {
 }
 
 /**
- * Counts and lists (one page of PREVIEW_PAGE_SIZE) orders matching [from, to]
- * and the chosen order view (see order-views.js — mirrors Shopify's own
- * Orders page tabs), plus a count for every view so a merchant can compare
- * before picking one. `cursor`/`direction` page forward or backward through
- * the same filter.
+ * Counts and lists (up to PREVIEW_LIMIT) orders matching [from, to] and the
+ * chosen order view (see order-views.js — mirrors Shopify's own Orders page
+ * tabs), plus a count for every view so a merchant can compare before
+ * picking one.
  */
-export async function previewOrderRange(
-  admin,
-  { from, to, orderView, cursor = null, direction = "next" },
-) {
+export async function previewOrderRange(admin, { from, to, orderView }) {
   const searchQuery = buildSearchQuery({ from, to, orderView });
-  // Sending both first/after and last/before — even with the unused pair set
-  // to null — makes Shopify reject the query with "Specify either first or
-  // last, not both". Only include the pair the current direction needs.
-  const paginationVariables =
-    direction === "prev"
-      ? { last: PREVIEW_PAGE_SIZE, before: cursor }
-      : { first: PREVIEW_PAGE_SIZE, after: cursor };
 
   const [breakdown, listResponse] = await Promise.all([
     Promise.all(
@@ -251,9 +224,7 @@ export async function previewOrderRange(
         ).count,
       })),
     ),
-    admin.graphql(PREVIEW_LIST_QUERY, {
-      variables: { searchQuery, ...paginationVariables },
-    }),
+    admin.graphql(PREVIEW_LIST_QUERY, { variables: { searchQuery } }),
   ]);
 
   const { data } = await listResponse.json();
@@ -275,7 +246,7 @@ export async function previewOrderRange(
       total: node.totalPriceSet?.shopMoney?.amount ?? null,
       currency: node.totalPriceSet?.shopMoney?.currencyCode ?? null,
     })),
-    pageInfo: data.orders.pageInfo,
+    truncated: data.orders.pageInfo.hasNextPage,
   };
 }
 
