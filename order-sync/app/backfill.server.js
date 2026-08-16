@@ -233,10 +233,13 @@ export async function previewOrderRange(
   { from, to, orderView, cursor = null, direction = "next" },
 ) {
   const searchQuery = buildSearchQuery({ from, to, orderView });
+  // Sending both first/after and last/before — even with the unused pair set
+  // to null — makes Shopify reject the query with "Specify either first or
+  // last, not both". Only include the pair the current direction needs.
   const paginationVariables =
     direction === "prev"
-      ? { last: PREVIEW_PAGE_SIZE, before: cursor, first: null, after: null }
-      : { first: PREVIEW_PAGE_SIZE, after: cursor, last: null, before: null };
+      ? { last: PREVIEW_PAGE_SIZE, before: cursor }
+      : { first: PREVIEW_PAGE_SIZE, after: cursor };
 
   const [breakdown, listResponse] = await Promise.all([
     Promise.all(
