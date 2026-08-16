@@ -2,7 +2,7 @@ import { Form, useActionData, useLoaderData, useNavigation } from "react-router"
 import { authenticate } from "../shopify.server";
 import { checkStore, verifyToken, PlatformError } from "../platform.server";
 import { previewOrderRange, syncOrderRange } from "../backfill.server";
-import { FINANCIAL_STATUSES } from "../financial-statuses";
+import { ORDER_VIEWS } from "../order-views";
 import {
   deleteToken,
   getConnection,
@@ -37,21 +37,21 @@ export const action = async ({ request }) => {
       return { ok: false, intent, message: "Start date must be before end date." };
     }
 
-    const financialStatuses = formData.getAll("financialStatus").map(String);
+    const orderView = String(formData.get("orderView") || "all");
 
     if (intent === "preview-range") {
       const preview = await previewOrderRange(admin, {
         from: dateFrom,
         to: dateTo,
-        financialStatuses,
+        orderView,
       });
-      return { ok: true, intent, dateFrom, dateTo, financialStatuses, preview };
+      return { ok: true, intent, dateFrom, dateTo, orderView, preview };
     }
 
     const { scanned, synced, skipped, failed, truncated } = await syncOrderRange(
       admin,
       session.shop,
-      { from: dateFrom, to: dateTo, financialStatuses },
+      { from: dateFrom, to: dateTo, orderView },
     );
     const summary = `Scanned ${scanned}: synced ${synced}, skipped ${skipped} already-synced, ${failed} failed.`;
     const message = truncated
@@ -347,19 +347,14 @@ export default function Index() {
               defaultValue={previewResult?.dateTo}
               required
             ></s-date-field>
-            <s-choice-list
-              label="Payment status"
-              name="financialStatus"
-              multiple
-              details="Leave all unchecked to preview every payment status."
-            >
-              {FINANCIAL_STATUSES.map((status) => (
+            <s-choice-list label="View" name="orderView" details="Same tabs as the Orders page.">
+              {ORDER_VIEWS.map((view) => (
                 <s-choice
-                  key={status}
-                  value={status}
-                  selected={previewResult?.financialStatuses.includes(status)}
+                  key={view.key}
+                  value={view.key}
+                  selected={(previewResult?.orderView ?? "all") === view.key}
                 >
-                  {status.replaceAll("_", " ")}
+                  {view.label}
                 </s-choice>
               ))}
             </s-choice-list>
@@ -370,20 +365,15 @@ export default function Index() {
 
           {previewResult && (
             <>
-              <s-paragraph>
-                {previewResult.preview.total} order(s) match this filter
-                {previewResult.preview.totalPrecision === "AT_LEAST" ? " (at least)" : ""}.
-              </s-paragraph>
+              <s-paragraph>{previewResult.preview.total} order(s) match this view.</s-paragraph>
 
-              {previewResult.preview.breakdown.length > 0 && (
-                <s-unordered-list>
-                  {previewResult.preview.breakdown.map((row) => (
-                    <s-list-item key={row.status}>
-                      {row.status.replaceAll("_", " ")}: {row.count}
-                    </s-list-item>
-                  ))}
-                </s-unordered-list>
-              )}
+              <s-unordered-list>
+                {previewResult.preview.breakdown.map((row) => (
+                  <s-list-item key={row.key}>
+                    {row.label}: {row.count}
+                  </s-list-item>
+                ))}
+              </s-unordered-list>
 
               {previewResult.preview.orders.length > 0 && (
                 <s-table variant="auto">
@@ -420,9 +410,7 @@ export default function Index() {
                   <input type="hidden" name="intent" value="sync-range" />
                   <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
                   <input type="hidden" name="dateTo" value={previewResult.dateTo} />
-                  {previewResult.financialStatuses.map((status) => (
-                    <input key={status} type="hidden" name="financialStatus" value={status} />
-                  ))}
+                  <input type="hidden" name="orderView" value={previewResult.orderView} />
                   <s-button type="submit" variant="primary" {...disabledWhenBusy}>
                     {busy ? "Syncing…" : `Sync ${previewResult.preview.total} order(s)`}
                   </s-button>

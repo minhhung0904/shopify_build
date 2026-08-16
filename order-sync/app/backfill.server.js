@@ -6,7 +6,7 @@
  */
 import { markSynced, wasSynced } from "./dedupe.server";
 import { sendOrderToPlatform } from "./platform.server";
-import { FINANCIAL_STATUSES } from "./financial-statuses";
+import { ORDER_VIEWS } from "./order-views";
 
 const PAGE_SIZE = 100;
 // Caps one click to a request Render won't time out on. Already-synced orders
@@ -134,10 +134,11 @@ function toWebhookShapedOrder(node) {
 }
 
 /** Builds the `query:` string shared by the count, list, and sync queries. */
-function buildSearchQuery({ from, to, financialStatuses = [] }) {
+function buildSearchQuery({ from, to, orderView }) {
   let searchQuery = `created_at:>=${from} created_at:<=${to}T23:59:59Z`;
-  if (financialStatuses.length > 0) {
-    searchQuery += ` financial_status:${financialStatuses.join(",")}`;
+  const view = ORDER_VIEWS.find((v) => v.key === orderView);
+  if (view?.query) {
+    searchQuery += ` ${view.query}`;
   }
   return searchQuery;
 }
@@ -184,37 +185,33 @@ const PREVIEW_LIST_QUERY = `#graphql
 `;
 
 /**
- * Counts and lists (up to PREVIEW_LIMIT) orders matching the filter, plus a
- * per-status breakdown, so a merchant can see what a sync would do before
- * committing to it. No PII — just what's needed to eyeball the list.
+ * Counts and lists (up to PREVIEW_LIMIT) orders matching [from, to] and the
+ * chosen order view (see order-views.js — mirrors Shopify's own Orders page
+ * tabs), plus a count for every view so a merchant can compare before
+ * picking one. No PII in the list — just what's needed to eyeball it.
  */
-export async function previewOrderRange(admin, { from, to, financialStatuses = [] }) {
-  const searchQuery = buildSearchQuery({ from, to, financialStatuses });
-  const statusesToBreakdown =
-    financialStatuses.length > 0 ? financialStatuses : FINANCIAL_STATUSES;
+export async function previewOrderRange(admin, { from, to, orderView }) {
+  const searchQuery = buildSearchQuery({ from, to, orderView });
 
-  const [total, breakdownCounts, listResponse] = await Promise.all([
-    countOrders(admin, searchQuery),
+  const [breakdown, listResponse] = await Promise.all([
     Promise.all(
-      statusesToBreakdown.map(async (status) => ({
-        status,
-        count: await countOrders(
-          admin,
-          buildSearchQuery({ from, to, financialStatuses: [status] }),
-        ),
+      ORDER_VIEWS.map(async (view) => ({
+        key: view.key,
+        label: view.label,
+        count: (
+          await countOrders(admin, buildSearchQuery({ from, to, orderView: view.key }))
+        ).count,
       })),
     ),
     admin.graphql(PREVIEW_LIST_QUERY, { variables: { searchQuery } }),
   ]);
 
   const { data } = await listResponse.json();
+  const total = breakdown.find((row) => row.key === orderView)?.count ?? 0;
 
   return {
-    total: total.count,
-    totalPrecision: total.precision,
-    breakdown: breakdownCounts
-      .filter((row) => row.count.count > 0)
-      .map((row) => ({ status: row.status, count: row.count.count })),
+    total,
+    breakdown,
     orders: data.orders.nodes.map((node) => ({
       id: node.legacyResourceId,
       name: node.name,
@@ -229,12 +226,12 @@ export async function previewOrderRange(admin, { from, to, financialStatuses = [
 
 /**
  * Resends every order created within [from, to] (inclusive, "YYYY-MM-DD")
- * that isn't already marked synced. An empty/omitted `financialStatuses`
- * matches every payment status. Stops after MAX_ORDERS and reports
- * `truncated: true` so the caller knows to offer another click.
+ * matching `orderView` (see order-views.js) that isn't already marked
+ * synced. Stops after MAX_ORDERS and reports `truncated: true` so the
+ * caller knows to offer another click.
  */
-export async function syncOrderRange(admin, shop, { from, to, financialStatuses = [] }) {
-  const searchQuery = buildSearchQuery({ from, to, financialStatuses });
+export async function syncOrderRange(admin, shop, { from, to, orderView }) {
+  const searchQuery = buildSearchQuery({ from, to, orderView });
 
   let cursor = null;
   let hasNextPage = true;
