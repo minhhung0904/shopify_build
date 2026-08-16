@@ -158,25 +158,55 @@ async function countOrders(admin, searchQuery) {
   return data.ordersCount;
 }
 
-// How many orders the preview table shows — kept well under MAX_ORDERS since
-// it's just for a merchant to eyeball before confirming.
-const PREVIEW_LIMIT = 50;
+// Orders per preview page. Small on purpose — this is paged, unlike the
+// sync loop, so each click stays fast.
+const PREVIEW_PAGE_SIZE = 20;
 
 const PREVIEW_LIST_QUERY = `#graphql
-  query PreviewOrders($searchQuery: String!) {
-    orders(first: ${PREVIEW_LIMIT}, query: $searchQuery, sortKey: CREATED_AT) {
+  query PreviewOrders(
+    $searchQuery: String!
+    $first: Int
+    $after: String
+    $last: Int
+    $before: String
+  ) {
+    orders(
+      query: $searchQuery
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+      sortKey: CREATED_AT
+    ) {
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
       nodes {
         legacyResourceId
         name
         createdAt
         displayFinancialStatus
+        displayFulfillmentStatus
+        customer {
+          firstName
+          lastName
+        }
         totalPriceSet {
           shopMoney {
             amount
             currencyCode
+          }
+        }
+        lineItems(first: 3) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            title
+            quantity
           }
         }
       }
@@ -184,14 +214,29 @@ const PREVIEW_LIST_QUERY = `#graphql
   }
 `;
 
+function summarizeLineItems(lineItems) {
+  const summary = (lineItems?.nodes ?? [])
+    .map((item) => `${item.title} x${item.quantity}`)
+    .join(", ");
+  return lineItems?.pageInfo?.hasNextPage ? `${summary}, …` : summary;
+}
+
 /**
- * Counts and lists (up to PREVIEW_LIMIT) orders matching [from, to] and the
- * chosen order view (see order-views.js — mirrors Shopify's own Orders page
- * tabs), plus a count for every view so a merchant can compare before
- * picking one. No PII in the list — just what's needed to eyeball it.
+ * Counts and lists (one page of PREVIEW_PAGE_SIZE) orders matching [from, to]
+ * and the chosen order view (see order-views.js — mirrors Shopify's own
+ * Orders page tabs), plus a count for every view so a merchant can compare
+ * before picking one. `cursor`/`direction` page forward or backward through
+ * the same filter.
  */
-export async function previewOrderRange(admin, { from, to, orderView }) {
+export async function previewOrderRange(
+  admin,
+  { from, to, orderView, cursor = null, direction = "next" },
+) {
   const searchQuery = buildSearchQuery({ from, to, orderView });
+  const paginationVariables =
+    direction === "prev"
+      ? { last: PREVIEW_PAGE_SIZE, before: cursor, first: null, after: null }
+      : { first: PREVIEW_PAGE_SIZE, after: cursor, last: null, before: null };
 
   const [breakdown, listResponse] = await Promise.all([
     Promise.all(
@@ -203,7 +248,9 @@ export async function previewOrderRange(admin, { from, to, orderView }) {
         ).count,
       })),
     ),
-    admin.graphql(PREVIEW_LIST_QUERY, { variables: { searchQuery } }),
+    admin.graphql(PREVIEW_LIST_QUERY, {
+      variables: { searchQuery, ...paginationVariables },
+    }),
   ]);
 
   const { data } = await listResponse.json();
@@ -216,11 +263,16 @@ export async function previewOrderRange(admin, { from, to, orderView }) {
       id: node.legacyResourceId,
       name: node.name,
       createdAt: node.createdAt,
-      status: node.displayFinancialStatus,
+      financialStatus: node.displayFinancialStatus,
+      fulfillmentStatus: node.displayFulfillmentStatus,
+      customerName: node.customer
+        ? [node.customer.firstName, node.customer.lastName].filter(Boolean).join(" ")
+        : null,
+      items: summarizeLineItems(node.lineItems),
       total: node.totalPriceSet?.shopMoney?.amount ?? null,
       currency: node.totalPriceSet?.shopMoney?.currencyCode ?? null,
     })),
-    truncated: data.orders.pageInfo.hasNextPage,
+    pageInfo: data.orders.pageInfo,
   };
 }
 

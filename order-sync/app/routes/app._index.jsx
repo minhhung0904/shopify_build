@@ -40,10 +40,14 @@ export const action = async ({ request }) => {
     const orderView = String(formData.get("orderView") || "all");
 
     if (intent === "preview-range") {
+      const cursor = formData.get("cursor") ? String(formData.get("cursor")) : null;
+      const direction = formData.get("direction") === "prev" ? "prev" : "next";
       const preview = await previewOrderRange(admin, {
         from: dateFrom,
         to: dateTo,
         orderView,
+        cursor,
+        direction,
       });
       return { ok: true, intent, dateFrom, dateTo, orderView, preview };
     }
@@ -380,7 +384,10 @@ export default function Index() {
                   <s-table-header-row>
                     <s-table-header listSlot="primary">Order</s-table-header>
                     <s-table-header listSlot="labeled">Date</s-table-header>
-                    <s-table-header listSlot="labeled">Status</s-table-header>
+                    <s-table-header listSlot="labeled">Customer</s-table-header>
+                    <s-table-header listSlot="labeled">Payment</s-table-header>
+                    <s-table-header listSlot="labeled">Fulfillment</s-table-header>
+                    <s-table-header listSlot="labeled">Items</s-table-header>
                     <s-table-header listSlot="labeled">Total</s-table-header>
                   </s-table-header-row>
                   <s-table-body>
@@ -388,7 +395,10 @@ export default function Index() {
                       <s-table-row key={order.id}>
                         <s-table-cell>{order.name}</s-table-cell>
                         <s-table-cell>{order.createdAt}</s-table-cell>
-                        <s-table-cell>{order.status}</s-table-cell>
+                        <s-table-cell>{order.customerName ?? "—"}</s-table-cell>
+                        <s-table-cell>{order.financialStatus}</s-table-cell>
+                        <s-table-cell>{order.fulfillmentStatus}</s-table-cell>
+                        <s-table-cell>{order.items}</s-table-cell>
                         <s-table-cell>
                           {order.total} {order.currency}
                         </s-table-cell>
@@ -398,12 +408,42 @@ export default function Index() {
                 </s-table>
               )}
 
-              {previewResult.preview.truncated && (
-                <s-paragraph color="subdued">
-                  Showing the first {previewResult.preview.orders.length} orders only —
-                  narrow the date range to see the rest.
-                </s-paragraph>
-              )}
+              <s-stack direction="inline" gap="base">
+                {previewResult.preview.pageInfo.hasPreviousPage && (
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="preview-range" />
+                    <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
+                    <input type="hidden" name="dateTo" value={previewResult.dateTo} />
+                    <input type="hidden" name="orderView" value={previewResult.orderView} />
+                    <input
+                      type="hidden"
+                      name="cursor"
+                      value={previewResult.preview.pageInfo.startCursor ?? ""}
+                    />
+                    <input type="hidden" name="direction" value="prev" />
+                    <s-button type="submit" {...disabledWhenBusy}>
+                      {busy ? "Loading…" : "Previous page"}
+                    </s-button>
+                  </Form>
+                )}
+                {previewResult.preview.pageInfo.hasNextPage && (
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="preview-range" />
+                    <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
+                    <input type="hidden" name="dateTo" value={previewResult.dateTo} />
+                    <input type="hidden" name="orderView" value={previewResult.orderView} />
+                    <input
+                      type="hidden"
+                      name="cursor"
+                      value={previewResult.preview.pageInfo.endCursor ?? ""}
+                    />
+                    <input type="hidden" name="direction" value="next" />
+                    <s-button type="submit" {...disabledWhenBusy}>
+                      {busy ? "Loading…" : "Next page"}
+                    </s-button>
+                  </Form>
+                )}
+              </s-stack>
 
               {previewResult.preview.total > 0 && (
                 <Form method="post">
