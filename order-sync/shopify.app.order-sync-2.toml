@@ -5,28 +5,19 @@ name = "SellfernSync"
 application_url = "https://sellfernsyncapp.onrender.com"
 embedded = true
 
-[access_scopes]
-scopes = "read_orders,read_all_orders"
-optional_scopes = [ ]
-use_legacy_install_flow = false
-
-[auth]
-redirect_urls = [ "https://sellfernsyncapp.onrender.com/auth/callback" ]
+[build]
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2026-10"
 
   [[webhooks.subscriptions]]
-  uri = "/webhooks/orders/create"
-  topics = [ "orders/create" ]
-
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/app/uninstalled"
-  topics = [ "app/uninstalled" ]
-
-  [[webhooks.subscriptions]]
   uri = "/webhooks/app/scopes_update"
   topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/orders/create"
+  topics = [ "orders/create" ]
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/customers/data_request"
@@ -40,6 +31,15 @@ api_version = "2026-10"
   uri = "/webhooks/shop/redact"
   compliance_topics = [ "shop/redact" ]
 
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
 
-[build]
-automatically_update_urls_on_dev = true
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_all_orders,read_customers,read_orders"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://sellfernsyncapp.onrender.com/auth/callback" ]
