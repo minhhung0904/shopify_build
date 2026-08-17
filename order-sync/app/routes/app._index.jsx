@@ -181,20 +181,12 @@ function FilterFields({ result }) {
   );
 }
 
-// Small at-a-glance tile used in the overview strip at the top of the page.
-function StatTile({ icon, tone, label, value, caption = null }) {
+// Round icon swatch used as the visual anchor on a card — gives each card an
+// identifiable accent instead of every section looking like the same flat box.
+function IconBadge({ icon, tone }) {
   return (
-    <s-box padding="base" border="base" borderRadius="base">
-      <s-stack direction="block" gap="small-200">
-        <s-stack direction="inline" gap="small-200" alignItems="center">
-          <s-icon type={icon} tone={tone} size="small"></s-icon>
-          <s-text color="subdued">{label}</s-text>
-        </s-stack>
-        <s-text type="strong">{value}</s-text>
-        {caption ? (
-          <s-text color="subdued">{caption}</s-text>
-        ) : null}
-      </s-stack>
+    <s-box padding="small-200" background="subdued" borderRadius="large-100">
+      <s-icon type={icon} tone={tone}></s-icon>
     </s-box>
   );
 }
@@ -310,146 +302,147 @@ export default function Index() {
 
   return (
     <s-page heading="Order Sync" inlineSize="large">
-      <s-section padding="none">
-        <s-grid gridTemplateColumns="repeat(3, 1fr)" gap="base">
-          <StatTile
-            icon={connection.connected ? "check-circle" : "alert-circle"}
-            tone={connection.connected ? "success" : "warning"}
-            label="Platform"
-            value={connection.connected ? "Connected" : "Not connected"}
-            caption={connection.connected ? `Token ending in ${connection.hint}` : "Orders won't sync until you connect"}
-          />
-          <StatTile
-            icon="store"
-            tone={connection.storeName ? "success" : "info"}
-            label="Sellfern store"
-            value={connection.storeName || "By shop domain"}
-            caption={connection.storeName ? undefined : "No store name mapped"}
-          />
-          <StatTile icon="globe" tone="info" label="Shopify shop" value={shop} />
-        </s-grid>
-      </s-section>
-
-      <s-section heading="Platform connection">
+      <s-section heading="Connection">
         {/* Without this, a rejected token fails silently and looks like the
             form simply didn't do anything. Store-name results carry an `intent`
-            and get their own banner in the Sellfern store section below. */}
+            and get their own banner inside the store card below. */}
         {result?.message && !storeResult && !backfillResult ? (
           <s-banner tone={result.ok ? "success" : "critical"}>
             {result.message}
           </s-banner>
         ) : null}
-        {connection.connected ? (
-          <>
-            <s-paragraph color="subdued">
-              New orders are forwarded to your platform automatically as they come in.
-            </s-paragraph>
-            <Form method="post">
-              <input type="hidden" name="intent" value="disconnect" />
-              <s-button type="submit" tone="critical" icon="delete" {...disabledWhenBusy}>
-                Disconnect
-              </s-button>
-            </Form>
-          </>
-        ) : (
-          <>
-            <s-paragraph color="subdued">
-              Orders placed before you connect are not synced.
-            </s-paragraph>
-            <Form method="post">
-              <s-text-field
-                name="token"
-                label="Integration token"
-                details="Generate one on the platform, then paste it here."
-                icon="lock"
-              />
-              <s-button type="submit" variant="primary" icon="check-circle" {...disabledWhenBusy}>
-                {busy ? "Connecting…" : "Connect"}
-              </s-button>
-            </Form>
-          </>
-        )}
-      </s-section>
 
-      {connection.connected && (
-        <s-section heading="Sellfern store">
-          {editing ? (
-            <>
-              {storeResult?.message && (
-                <s-banner tone={storeBannerTone}>{storeResult.message}</s-banner>
-              )}
-              <s-paragraph color="subdued">
-                Type the store name exactly as it appears in Sellfern under
-                Settings → Stores. Synced orders are filed under this name. Leave
-                it empty to let the platform map orders by shop domain instead.
-              </s-paragraph>
-
-              <Form method="post" key={storeFieldValue}>
-                <input
-                  type="hidden"
-                  name="intent"
-                  value={canSave ? "save-store" : "check-store"}
+        <s-grid gridTemplateColumns={connection.connected ? "1fr 1fr" : "1fr"} gap="base">
+          <s-box padding="base" background="subdued" borderRadius="base" border="base">
+            <s-stack direction="block" gap="base">
+              <s-stack direction="inline" gap="small-200" alignItems="center">
+                <IconBadge
+                  icon={connection.connected ? "check-circle" : "alert-circle"}
+                  tone={connection.connected ? "success" : "warning"}
                 />
-                <s-text-field
-                  name="storeName"
-                  label="Store name"
-                  defaultValue={storeFieldValue}
-                  icon="store"
-                  details={
-                    connection.storeName
-                      ? `Currently syncing to "${connection.storeName}".`
-                      : "No store name set yet."
-                  }
-                />
-                <s-button
-                  type="submit"
-                  variant="primary"
-                  icon={canSave ? "save" : "search"}
-                  {...disabledWhenBusy}
-                >
-                  {busy
-                    ? canSave
-                      ? "Saving…"
-                      : "Checking…"
-                    : canSave
-                      ? "Save store"
-                      : "Check store"}
-                </s-button>
-              </Form>
-
-              {/* Only offer Cancel when there's a saved name to fall back to. */}
-              {connection.storeName && (
-                <Form method="post">
-                  <input type="hidden" name="intent" value="cancel-store-edit" />
-                  <s-button type="submit" variant="tertiary" {...disabledWhenBusy}>
-                    Cancel
-                  </s-button>
-                </Form>
-              )}
-            </>
-          ) : (
-            <>
-              <s-badge tone="success" icon="check-circle" size="large">
-                Syncing to "{connection.storeName}"
-              </s-badge>
-              <s-stack direction="inline" gap="base">
-                <Form method="post">
-                  <input type="hidden" name="intent" value="edit-store" />
-                  <s-button type="submit" icon="edit" {...disabledWhenBusy}>
-                    Edit
-                  </s-button>
-                </Form>
-                <Form method="post">
-                  <input type="hidden" name="intent" value="remove-store" />
-                  <s-button type="submit" tone="critical" icon="delete" {...disabledWhenBusy}>
-                    Remove
-                  </s-button>
-                </Form>
+                <s-stack direction="block" gap="small-100">
+                  <s-text type="strong">Platform</s-text>
+                  <s-badge tone={connection.connected ? "success" : "warning"}>
+                    {connection.connected ? "Connected" : "Not connected"}
+                  </s-badge>
+                </s-stack>
               </s-stack>
-            </>
+
+              {connection.connected ? (
+                <>
+                  <s-text color="subdued">
+                    Token ending in {connection.hint}. New orders sync automatically.
+                  </s-text>
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="disconnect" />
+                    <s-button type="submit" tone="critical" icon="delete" {...disabledWhenBusy}>
+                      Disconnect
+                    </s-button>
+                  </Form>
+                </>
+              ) : (
+                <>
+                  <s-text color="subdued">
+                    Orders placed before you connect are not synced.
+                  </s-text>
+                  <Form method="post">
+                    <s-text-field
+                      name="token"
+                      label="Integration token"
+                      details="Generate one on the platform, then paste it here."
+                      icon="lock"
+                    />
+                    <s-button type="submit" variant="primary" icon="check-circle" {...disabledWhenBusy}>
+                      {busy ? "Connecting…" : "Connect"}
+                    </s-button>
+                  </Form>
+                </>
+              )}
+            </s-stack>
+          </s-box>
+
+          {connection.connected && (
+            <s-box padding="base" background="subdued" borderRadius="base" border="base">
+              <s-stack direction="block" gap="base">
+                <s-stack direction="inline" gap="small-200" alignItems="center">
+                  <IconBadge icon="store" tone={connection.storeName ? "success" : "info"} />
+                  <s-stack direction="block" gap="small-100">
+                    <s-text type="strong">Sellfern store</s-text>
+                    <s-badge tone={connection.storeName ? "success" : "info"}>
+                      {connection.storeName || "By shop domain"}
+                    </s-badge>
+                  </s-stack>
+                </s-stack>
+
+                {editing ? (
+                  <>
+                    {storeResult?.message && (
+                      <s-banner tone={storeBannerTone}>{storeResult.message}</s-banner>
+                    )}
+                    <s-text color="subdued">
+                      Type the name exactly as it appears in Sellfern under
+                      Settings → Stores. Leave empty to map by shop domain instead.
+                    </s-text>
+
+                    <Form method="post" key={storeFieldValue}>
+                      <input
+                        type="hidden"
+                        name="intent"
+                        value={canSave ? "save-store" : "check-store"}
+                      />
+                      <s-text-field
+                        name="storeName"
+                        label="Store name"
+                        defaultValue={storeFieldValue}
+                        icon="store"
+                      />
+                      <s-button
+                        type="submit"
+                        variant="primary"
+                        icon={canSave ? "save" : "search"}
+                        {...disabledWhenBusy}
+                      >
+                        {busy
+                          ? canSave
+                            ? "Saving…"
+                            : "Checking…"
+                          : canSave
+                            ? "Save store"
+                            : "Check store"}
+                      </s-button>
+                    </Form>
+
+                    {/* Only offer Cancel when there's a saved name to fall back to. */}
+                    {connection.storeName && (
+                      <Form method="post">
+                        <input type="hidden" name="intent" value="cancel-store-edit" />
+                        <s-button type="submit" variant="tertiary" {...disabledWhenBusy}>
+                          Cancel
+                        </s-button>
+                      </Form>
+                    )}
+                  </>
+                ) : (
+                  <s-stack direction="inline" gap="base">
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="edit-store" />
+                      <s-button type="submit" icon="edit" {...disabledWhenBusy}>
+                        Edit
+                      </s-button>
+                    </Form>
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="remove-store" />
+                      <s-button type="submit" tone="critical" icon="delete" {...disabledWhenBusy}>
+                        Remove
+                      </s-button>
+                    </Form>
+                  </s-stack>
+                )}
+              </s-stack>
+            </s-box>
           )}
-        </s-section>
-      )}
+        </s-grid>
+      </s-section>
 
       {connection.connected && (
         <s-section heading="Backfill orders">
@@ -500,20 +493,25 @@ export default function Index() {
             <>
               <s-divider></s-divider>
 
-              <s-stack direction="inline" gap="small-200" alignItems="center">
-                <s-text type="strong">
-                  {previewResult.preview.total}
-                  {previewResult.preview.totalExact ? "" : "+"} order(s) match this view
-                </s-text>
-              </s-stack>
+              <s-stack direction="inline" gap="base" alignItems="center">
+                <s-box padding="base" background="subdued" borderRadius="base">
+                  <s-stack direction="block" gap="small-100">
+                    <s-text color="subdued">Matching orders</s-text>
+                    <s-heading>
+                      {previewResult.preview.total}
+                      {previewResult.preview.totalExact ? "" : "+"}
+                    </s-heading>
+                  </s-stack>
+                </s-box>
 
-              <s-stack direction="inline" gap="small-200" alignItems="center">
-                {previewResult.preview.breakdown.map((row) => (
-                  <s-chip key={row.key} accessibilityLabel={row.label}>
-                    {row.label}: {row.count}
-                    {row.exact ? "" : "+"}
-                  </s-chip>
-                ))}
+                <s-stack direction="inline" gap="small-200" alignItems="center">
+                  {previewResult.preview.breakdown.map((row) => (
+                    <s-chip key={row.key} accessibilityLabel={row.label}>
+                      {row.label}: {row.count}
+                      {row.exact ? "" : "+"}
+                    </s-chip>
+                  ))}
+                </s-stack>
               </s-stack>
 
               {previewResult.preview.orders.length > 0 && (
