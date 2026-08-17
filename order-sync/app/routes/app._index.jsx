@@ -39,21 +39,44 @@ export const action = async ({ request }) => {
 
     const orderView = String(formData.get("orderView") || "all");
 
-    if (intent === "preview-range") {
-      const preview = await previewOrderRange(admin, { from: dateFrom, to: dateTo, orderView });
-      return { ok: true, intent, dateFrom, dateTo, orderView, preview };
-    }
+    // Shopify refusing a query (throttled, over the per-query cost ceiling,
+    // missing scope) surfaces as a thrown Error here. Report it instead of
+    // letting it crash the route — an unhandled one renders a bare 500 with
+    // no hint of what Shopify objected to. Responses are the library's own
+    // re-auth redirects and must keep propagating.
+    try {
+      if (intent === "preview-range") {
+        const cursor = formData.get("cursor") ? String(formData.get("cursor")) : null;
+        const direction = formData.get("direction") === "prev" ? "prev" : "next";
+        // Page number is display-only; it rides along so "Showing 21–40" stays
+        // right while paging, and resets to 1 whenever the filter form is used.
+        const fromPage = Number(formData.get("page")) || 1;
+        const page = cursor ? (direction === "prev" ? fromPage - 1 : fromPage + 1) : 1;
 
-    const { scanned, synced, skipped, failed, truncated } = await syncOrderRange(
-      admin,
-      session.shop,
-      { from: dateFrom, to: dateTo, orderView },
-    );
-    const summary = `Scanned ${scanned}: synced ${synced}, skipped ${skipped} already-synced, ${failed} failed.`;
-    const message = truncated
-      ? `${summary} More orders remain in range — click Sync again to continue.`
-      : `${summary} Done.`;
-    return { ok: failed === 0, intent, message };
+        const preview = await previewOrderRange(admin, {
+          from: dateFrom,
+          to: dateTo,
+          orderView,
+          cursor,
+          direction,
+        });
+        return { ok: true, intent, dateFrom, dateTo, orderView, page, preview };
+      }
+
+      const { scanned, synced, skipped, failed, truncated } = await syncOrderRange(
+        admin,
+        session.shop,
+        { from: dateFrom, to: dateTo, orderView },
+      );
+      const summary = `Scanned ${scanned}: synced ${synced}, skipped ${skipped} already-synced, ${failed} failed.`;
+      const message = truncated
+        ? `${summary} More orders remain in range — click Sync again to continue.`
+        : `${summary} Done.`;
+      return { ok: failed === 0, intent, message };
+    } catch (error) {
+      if (error instanceof Response) throw error;
+      return { ok: false, intent, message: `Shopify rejected the request: ${error.message}` };
+    }
   }
 
   if (intent === "disconnect") {
@@ -143,6 +166,21 @@ export const action = async ({ request }) => {
   return { ok: true, message: "Connected." };
 };
 
+/**
+ * The filter a preview ran under, replayed as hidden fields by every button
+ * that re-runs it — page back, page forward, and sync. Each preview response
+ * echoes the filter back, so paging never drifts from what's on screen.
+ */
+function FilterFields({ result }) {
+  return (
+    <>
+      <input type="hidden" name="dateFrom" value={result.dateFrom} />
+      <input type="hidden" name="dateTo" value={result.dateTo} />
+      <input type="hidden" name="orderView" value={result.orderView} />
+    </>
+  );
+}
+
 export default function Index() {
   const { connection, shop } = useLoaderData();
   const result = useActionData();
@@ -167,6 +205,12 @@ export default function Index() {
   const backfillResult =
     result?.intent === "preview-range" || result?.intent === "sync-range" ? result : null;
   const previewResult = result?.intent === "preview-range" && result.ok ? result : null;
+
+  // Row range covered by the page on screen, e.g. "Showing 21–40 of 137".
+  const pageStart = previewResult
+    ? (previewResult.page - 1) * previewResult.preview.pageSize + 1
+    : 0;
+  const pageEnd = previewResult ? pageStart + previewResult.preview.orders.length - 1 : 0;
 
   // The two-step check/save flow only ever reports via these intents.
   const storeIntent =
@@ -361,12 +405,16 @@ export default function Index() {
 
           {previewResult && (
             <>
-              <s-paragraph>{previewResult.preview.total} order(s) match this view.</s-paragraph>
+              <s-paragraph>
+                {previewResult.preview.total}
+                {previewResult.preview.totalExact ? "" : "+"} order(s) match this view.
+              </s-paragraph>
 
               <s-unordered-list>
                 {previewResult.preview.breakdown.map((row) => (
                   <s-list-item key={row.key}>
                     {row.label}: {row.count}
+                    {row.exact ? "" : "+"}
                   </s-list-item>
                 ))}
               </s-unordered-list>
@@ -400,19 +448,53 @@ export default function Index() {
                 </s-table>
               )}
 
-              {previewResult.preview.truncated && (
-                <s-paragraph color="subdued">
-                  Showing the first {previewResult.preview.orders.length} orders only —
-                  narrow the date range to see the rest.
-                </s-paragraph>
+              {previewResult.preview.orders.length > 0 && (
+                <s-stack direction="inline" gap="base">
+                  {previewResult.preview.pageInfo.hasPreviousPage && (
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="preview-range" />
+                      <FilterFields result={previewResult} />
+                      <input type="hidden" name="page" value={previewResult.page} />
+                      <input type="hidden" name="direction" value="prev" />
+                      <input
+                        type="hidden"
+                        name="cursor"
+                        value={previewResult.preview.pageInfo.startCursor ?? ""}
+                      />
+                      <s-button type="submit" {...disabledWhenBusy}>
+                        Previous
+                      </s-button>
+                    </Form>
+                  )}
+
+                  <s-paragraph color="subdued">
+                    Showing {pageStart}–{pageEnd} of {previewResult.preview.total}
+                    {previewResult.preview.totalExact ? "" : "+"}
+                  </s-paragraph>
+
+                  {previewResult.preview.pageInfo.hasNextPage && (
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="preview-range" />
+                      <FilterFields result={previewResult} />
+                      <input type="hidden" name="page" value={previewResult.page} />
+                      <input type="hidden" name="direction" value="next" />
+                      <input
+                        type="hidden"
+                        name="cursor"
+                        value={previewResult.preview.pageInfo.endCursor ?? ""}
+                      />
+                      <s-button type="submit" {...disabledWhenBusy}>
+                        Next
+                      </s-button>
+                    </Form>
+                  )}
+                </s-stack>
               )}
 
               {previewResult.preview.total > 0 && (
                 <Form method="post">
                   <input type="hidden" name="intent" value="sync-range" />
-                  <input type="hidden" name="dateFrom" value={previewResult.dateFrom} />
-                  <input type="hidden" name="dateTo" value={previewResult.dateTo} />
-                  <input type="hidden" name="orderView" value={previewResult.orderView} />
+                  <FilterFields result={previewResult} />
                   <s-button type="submit" variant="primary" {...disabledWhenBusy}>
                     {busy ? "Syncing…" : `Sync ${previewResult.preview.total} order(s)`}
                   </s-button>
