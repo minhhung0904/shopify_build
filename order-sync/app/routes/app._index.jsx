@@ -181,6 +181,72 @@ function FilterFields({ result }) {
   );
 }
 
+// Small at-a-glance tile used in the overview strip at the top of the page.
+function StatTile({ icon, tone, label, value, caption = null }) {
+  return (
+    <s-box padding="base" border="base" borderRadius="base">
+      <s-stack direction="block" gap="small-200">
+        <s-stack direction="inline" gap="small-200" alignItems="center">
+          <s-icon type={icon} tone={tone} size="small"></s-icon>
+          <s-text color="subdued">{label}</s-text>
+        </s-stack>
+        <s-text type="strong">{value}</s-text>
+        {caption ? (
+          <s-text color="subdued">{caption}</s-text>
+        ) : null}
+      </s-stack>
+    </s-box>
+  );
+}
+
+// Shopify's raw GraphQL enum values (e.g. PARTIALLY_REFUNDED) turned into
+// merchant-facing labels, matching how the Orders page itself renders them.
+function formatStatusLabel(status) {
+  if (!status) return "—";
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function financialTone(status) {
+  switch (status) {
+    case "PAID":
+    case "PARTIALLY_PAID":
+      return "success";
+    case "AUTHORIZED":
+      return "info";
+    case "PENDING":
+      return "warning";
+    case "PARTIALLY_REFUNDED":
+    case "REFUNDED":
+      return "caution";
+    case "VOIDED":
+    case "EXPIRED":
+      return "critical";
+    default:
+      return "auto";
+  }
+}
+
+function fulfillmentTone(status) {
+  switch (status) {
+    case "FULFILLED":
+      return "success";
+    case "PARTIALLY_FULFILLED":
+    case "ON_HOLD":
+      return "warning";
+    case "SCHEDULED":
+      return "info";
+    case "UNFULFILLED":
+    case "RESTOCKED":
+      return "caution";
+    default:
+      return "auto";
+  }
+}
+
 export default function Index() {
   const { connection, shop } = useLoaderData();
   const result = useActionData();
@@ -243,7 +309,27 @@ export default function Index() {
         : "info";
 
   return (
-    <s-page heading="OrderSync">
+    <s-page heading="Order Sync" inlineSize="large">
+      <s-section padding="none">
+        <s-grid gridTemplateColumns="repeat(3, 1fr)" gap="base">
+          <StatTile
+            icon={connection.connected ? "check-circle" : "alert-circle"}
+            tone={connection.connected ? "success" : "warning"}
+            label="Platform"
+            value={connection.connected ? "Connected" : "Not connected"}
+            caption={connection.connected ? `Token ending in ${connection.hint}` : "Orders won't sync until you connect"}
+          />
+          <StatTile
+            icon="store"
+            tone={connection.storeName ? "success" : "info"}
+            label="Sellfern store"
+            value={connection.storeName || "By shop domain"}
+            caption={connection.storeName ? undefined : "No store name mapped"}
+          />
+          <StatTile icon="globe" tone="info" label="Shopify shop" value={shop} />
+        </s-grid>
+      </s-section>
+
       <s-section heading="Platform connection">
         {/* Without this, a rejected token fails silently and looks like the
             form simply didn't do anything. Store-name results carry an `intent`
@@ -255,29 +341,29 @@ export default function Index() {
         ) : null}
         {connection.connected ? (
           <>
-            <s-banner tone="success">
-              {shop} is connected — token ending in {connection.hint}. New orders
-              are forwarded automatically.
-            </s-banner>
+            <s-paragraph color="subdued">
+              New orders are forwarded to your platform automatically as they come in.
+            </s-paragraph>
             <Form method="post">
               <input type="hidden" name="intent" value="disconnect" />
-              <s-button type="submit" tone="critical" {...disabledWhenBusy}>
+              <s-button type="submit" tone="critical" icon="delete" {...disabledWhenBusy}>
                 Disconnect
               </s-button>
             </Form>
           </>
         ) : (
           <>
-            <s-banner tone="warning">
-              Not connected. Orders placed before you connect are not synced.
-            </s-banner>
+            <s-paragraph color="subdued">
+              Orders placed before you connect are not synced.
+            </s-paragraph>
             <Form method="post">
               <s-text-field
                 name="token"
                 label="Integration token"
                 details="Generate one on the platform, then paste it here."
+                icon="lock"
               />
-              <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+              <s-button type="submit" variant="primary" icon="check-circle" {...disabledWhenBusy}>
                 {busy ? "Connecting…" : "Connect"}
               </s-button>
             </Form>
@@ -292,7 +378,7 @@ export default function Index() {
               {storeResult?.message && (
                 <s-banner tone={storeBannerTone}>{storeResult.message}</s-banner>
               )}
-              <s-paragraph>
+              <s-paragraph color="subdued">
                 Type the store name exactly as it appears in Sellfern under
                 Settings → Stores. Synced orders are filed under this name. Leave
                 it empty to let the platform map orders by shop domain instead.
@@ -308,13 +394,19 @@ export default function Index() {
                   name="storeName"
                   label="Store name"
                   defaultValue={storeFieldValue}
+                  icon="store"
                   details={
                     connection.storeName
                       ? `Currently syncing to "${connection.storeName}".`
                       : "No store name set yet."
                   }
                 />
-                <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+                <s-button
+                  type="submit"
+                  variant="primary"
+                  icon={canSave ? "save" : "search"}
+                  {...disabledWhenBusy}
+                >
                   {busy
                     ? canSave
                       ? "Saving…"
@@ -337,20 +429,19 @@ export default function Index() {
             </>
           ) : (
             <>
-              <s-banner tone="success">
-                Orders sync to store "{connection.storeName}". Edit or remove to
-                change it.
-              </s-banner>
+              <s-badge tone="success" icon="check-circle" size="large">
+                Syncing to "{connection.storeName}"
+              </s-badge>
               <s-stack direction="inline" gap="base">
                 <Form method="post">
                   <input type="hidden" name="intent" value="edit-store" />
-                  <s-button type="submit" {...disabledWhenBusy}>
+                  <s-button type="submit" icon="edit" {...disabledWhenBusy}>
                     Edit
                   </s-button>
                 </Form>
                 <Form method="post">
                   <input type="hidden" name="intent" value="remove-store" />
-                  <s-button type="submit" tone="critical" {...disabledWhenBusy}>
+                  <s-button type="submit" tone="critical" icon="delete" {...disabledWhenBusy}>
                     Remove
                   </s-button>
                 </Form>
@@ -362,7 +453,7 @@ export default function Index() {
 
       {connection.connected && (
         <s-section heading="Backfill orders">
-          <s-paragraph>
+          <s-paragraph color="subdued">
             Resend orders Shopify already delivered in a date range — useful
             after connecting, or to recover a range that failed earlier.
             Ranges older than 60 days need the read_all_orders scope; without
@@ -375,18 +466,20 @@ export default function Index() {
           )}
           <Form method="post">
             <input type="hidden" name="intent" value="preview-range" />
-            <s-date-field
-              label="From"
-              name="dateFrom"
-              defaultValue={previewResult?.dateFrom}
-              required
-            ></s-date-field>
-            <s-date-field
-              label="To"
-              name="dateTo"
-              defaultValue={previewResult?.dateTo}
-              required
-            ></s-date-field>
+            <s-grid gridTemplateColumns="1fr 1fr" gap="base">
+              <s-date-field
+                label="From"
+                name="dateFrom"
+                defaultValue={previewResult?.dateFrom}
+                required
+              ></s-date-field>
+              <s-date-field
+                label="To"
+                name="dateTo"
+                defaultValue={previewResult?.dateTo}
+                required
+              ></s-date-field>
+            </s-grid>
             <s-choice-list label="View" name="orderView" details="Same tabs as the Orders page.">
               {ORDER_VIEWS.map((view) => (
                 <s-choice
@@ -398,26 +491,30 @@ export default function Index() {
                 </s-choice>
               ))}
             </s-choice-list>
-            <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+            <s-button type="submit" variant="primary" icon="search" {...disabledWhenBusy}>
               {busy ? "Loading…" : "Preview"}
             </s-button>
           </Form>
 
           {previewResult && (
             <>
-              <s-paragraph>
-                {previewResult.preview.total}
-                {previewResult.preview.totalExact ? "" : "+"} order(s) match this view.
-              </s-paragraph>
+              <s-divider></s-divider>
 
-              <s-unordered-list>
+              <s-stack direction="inline" gap="small-200" alignItems="center">
+                <s-text type="strong">
+                  {previewResult.preview.total}
+                  {previewResult.preview.totalExact ? "" : "+"} order(s) match this view
+                </s-text>
+              </s-stack>
+
+              <s-stack direction="inline" gap="small-200" alignItems="center">
                 {previewResult.preview.breakdown.map((row) => (
-                  <s-list-item key={row.key}>
+                  <s-chip key={row.key} accessibilityLabel={row.label}>
                     {row.label}: {row.count}
                     {row.exact ? "" : "+"}
-                  </s-list-item>
+                  </s-chip>
                 ))}
-              </s-unordered-list>
+              </s-stack>
 
               {previewResult.preview.orders.length > 0 && (
                 <s-table variant="auto">
@@ -436,11 +533,21 @@ export default function Index() {
                         <s-table-cell>{order.name}</s-table-cell>
                         <s-table-cell>{order.createdAt}</s-table-cell>
                         <s-table-cell>{order.customerName ?? "—"}</s-table-cell>
-                        <s-table-cell>{order.financialStatus}</s-table-cell>
-                        <s-table-cell>{order.fulfillmentStatus}</s-table-cell>
+                        <s-table-cell>
+                          <s-badge tone={financialTone(order.financialStatus)}>
+                            {formatStatusLabel(order.financialStatus)}
+                          </s-badge>
+                        </s-table-cell>
+                        <s-table-cell>
+                          <s-badge tone={fulfillmentTone(order.fulfillmentStatus)}>
+                            {formatStatusLabel(order.fulfillmentStatus)}
+                          </s-badge>
+                        </s-table-cell>
                         <s-table-cell>{order.items}</s-table-cell>
                         <s-table-cell>
-                          {order.total} {order.currency}
+                          <s-text type="strong">
+                            {order.total} {order.currency}
+                          </s-text>
                         </s-table-cell>
                       </s-table-row>
                     ))}
@@ -449,7 +556,7 @@ export default function Index() {
               )}
 
               {previewResult.preview.orders.length > 0 && (
-                <s-stack direction="inline" gap="base">
+                <s-stack direction="inline" gap="base" alignItems="center">
                   {previewResult.preview.pageInfo.hasPreviousPage && (
                     <Form method="post">
                       <input type="hidden" name="intent" value="preview-range" />
@@ -461,16 +568,16 @@ export default function Index() {
                         name="cursor"
                         value={previewResult.preview.pageInfo.startCursor ?? ""}
                       />
-                      <s-button type="submit" {...disabledWhenBusy}>
+                      <s-button type="submit" icon="chevron-left" {...disabledWhenBusy}>
                         Previous
                       </s-button>
                     </Form>
                   )}
 
-                  <s-paragraph color="subdued">
+                  <s-text color="subdued">
                     Showing {pageStart}–{pageEnd} of {previewResult.preview.total}
                     {previewResult.preview.totalExact ? "" : "+"}
-                  </s-paragraph>
+                  </s-text>
 
                   {previewResult.preview.pageInfo.hasNextPage && (
                     <Form method="post">
@@ -483,7 +590,7 @@ export default function Index() {
                         name="cursor"
                         value={previewResult.preview.pageInfo.endCursor ?? ""}
                       />
-                      <s-button type="submit" {...disabledWhenBusy}>
+                      <s-button type="submit" icon="chevron-right" {...disabledWhenBusy}>
                         Next
                       </s-button>
                     </Form>
@@ -495,7 +602,7 @@ export default function Index() {
                 <Form method="post">
                   <input type="hidden" name="intent" value="sync-range" />
                   <FilterFields result={previewResult} />
-                  <s-button type="submit" variant="primary" {...disabledWhenBusy}>
+                  <s-button type="submit" variant="primary" icon="refresh" {...disabledWhenBusy}>
                     {busy ? "Syncing…" : `Sync ${previewResult.preview.total} order(s)`}
                   </s-button>
                 </Form>
@@ -505,10 +612,10 @@ export default function Index() {
         </s-section>
       )}
 
-      <s-section heading="Privacy">
-        <a href="/privacy" target="_blank" rel="noreferrer">
+      <s-section heading="Privacy" padding="base">
+        <s-link href="/privacy" target="_blank">
           View our privacy policy
-        </a>
+        </s-link>
       </s-section>
     </s-page>
   );
